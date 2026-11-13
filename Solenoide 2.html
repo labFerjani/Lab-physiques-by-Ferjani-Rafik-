@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Labo physiques — Champ magnétique d’un solénoïde</title>
+<style>
+:root{
+  --bg:#e4f0ff; --bg2:#fbeaff; --card:rgba(255,255,255,.90); --panel:rgba(255,255,255,.94);
+  --ink:#14213d; --muted:#51607a; --line:#b9cdea; --accent:#2563eb; --accent2:#7c3aed; --accent-ink:#ffffff;
+  --lcd-bg:#0b1b2e; --lcd-ink:#5dff9b; --warn:#d92d20; --ok:#12a150; --amber:#d97706;
+  --copper:#f97316; --sol:#fff7ed; --probe:#64748b; --wm:rgba(37,99,235,.11); --flow:#ef4444;
+  --c-gen:#f59e0b; --c-sol:#7c3aed; --c-amp:#10b981; --c-tes:#06b6d4; --c-ori:#ec4899;
+  --blob1:rgba(124,58,237,.30); --blob2:rgba(6,182,212,.30); --blob3:rgba(236,72,153,.24); --grid:rgba(37,99,235,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0a1020; --bg2:#160d2b; --card:rgba(20,31,56,.90); --panel:rgba(18,28,50,.94);
+    --ink:#eef3ff; --muted:#a3b2d0; --line:#2b3d63; --accent:#60a5fa; --accent2:#a78bfa; --accent-ink:#0b1220;
+    --lcd-bg:#050d1a; --lcd-ink:#7dffae; --warn:#ff8a80; --ok:#4ade80; --amber:#fbbf24;
+    --copper:#fb923c; --sol:#1d2a47; --probe:#94a3b8; --wm:rgba(147,197,253,.11); --flow:#fb7185;
+    --c-gen:#fbbf24; --c-sol:#a78bfa; --c-amp:#34d399; --c-tes:#22d3ee; --c-ori:#f472b6;
+    --blob1:rgba(124,58,237,.34); --blob2:rgba(6,182,212,.22); --blob3:rgba(236,72,153,.22); --grid:rgba(147,197,253,.06);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0a1020; --bg2:#160d2b; --card:rgba(20,31,56,.90); --panel:rgba(18,28,50,.94);
+  --ink:#eef3ff; --muted:#a3b2d0; --line:#2b3d63; --accent:#60a5fa; --accent2:#a78bfa; --accent-ink:#0b1220;
+  --lcd-bg:#050d1a; --lcd-ink:#7dffae; --warn:#ff8a80; --ok:#4ade80; --amber:#fbbf24;
+  --copper:#fb923c; --sol:#1d2a47; --probe:#94a3b8; --wm:rgba(147,197,253,.11); --flow:#fb7185;
+  --c-gen:#fbbf24; --c-sol:#a78bfa; --c-amp:#34d399; --c-tes:#22d3ee; --c-ori:#f472b6;
+  --blob1:rgba(124,58,237,.34); --blob2:rgba(6,182,212,.22); --blob3:rgba(236,72,153,.22); --grid:rgba(147,197,253,.06);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%; scroll-padding-top:env(safe-area-inset-top,0px); background:var(--bg)}
+body{
+  margin:0; color:var(--ink); min-height:100vh;
+  font:15px/1.42 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  background:
+    radial-gradient(900px 520px at 6% -6%, var(--blob1), transparent 62%),
+    radial-gradient(820px 520px at 102% 8%, var(--blob2), transparent 62%),
+    radial-gradient(900px 600px at 50% 112%, var(--blob3), transparent 62%),
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0/26px 26px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/26px 26px,
+    linear-gradient(160deg,var(--bg),var(--bg2));
+  background-attachment:fixed;
+  --st:var(--c-tes);
+}
+body[data-study="I"]{--st:var(--c-tes)}
+body[data-study="N"]{--st:var(--c-sol)}
+body[data-study="L"]{--st:var(--c-ori)}
+.page{max-width:1000px; margin:0 auto; padding:10px 10px 26px}
+
+/* vecteur et norme */
+.vec{position:relative; display:inline-block; font-style:normal}
+.vec::after{content:"→"; position:absolute; left:50%; top:-.64em; transform:translateX(-54%); font-size:.66em; line-height:1}
+.nrm{white-space:nowrap}
+
+/* en-tête compact */
+.hero{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px 12px;
+  background:linear-gradient(120deg,#2563eb 0%,#7c3aed 55%,#ec4899 100%); color:#fff; border-radius:16px; padding:9px 14px;
+  box-shadow:0 8px 22px rgba(37,99,235,.28)}
+.brand{font-size:11.5px; font-weight:700; color:#ffe08a; letter-spacing:.4px; text-transform:uppercase}
+h1{margin:0; font-size:clamp(16px,4.2vw,23px); line-height:1.2; color:#fff}
+.tel{padding:4px 11px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.45); border-radius:999px; font-weight:700; font-size:12.5px; color:#fff; white-space:nowrap}
+
+/* études */
+.tabs{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:9px}
+.tab{height:40px; border-radius:12px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); font-weight:700; font-size:14px; cursor:pointer}
+.tab[data-s="I"]{--tc:var(--c-tes)} .tab[data-s="N"]{--tc:var(--c-sol)} .tab[data-s="L"]{--tc:var(--c-ori)}
+.tab[aria-selected="true"]{background:var(--tc); border-color:var(--tc); color:#fff; box-shadow:0 4px 12px color-mix(in srgb,var(--tc) 45%,transparent)}
+.consigne{margin:7px 2px 0; padding:6px 11px; border-radius:10px; background:color-mix(in srgb,var(--st) 14%,var(--card)); border-left:4px solid var(--st); font-size:13px}
+
+/* tableau de bord compact */
+.dash{display:grid; gap:8px; margin-top:8px}
+@media (min-width:860px){ .dash{grid-template-columns:1.25fr 1fr; align-items:start} }
+.sceneBox{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:4px; box-shadow:0 4px 14px rgba(20,33,61,.08)}
+#scene{display:block; width:100%; height:auto}
+.reads{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px}
+.mini{border-radius:12px; padding:6px 7px 7px; background:var(--card); border:1px solid var(--line); border-top:4px solid var(--cc); box-shadow:0 3px 10px rgba(20,33,61,.08); min-width:0}
+.mini small{display:block; font-size:10.5px; letter-spacing:.3px; text-transform:uppercase; color:var(--cc); font-weight:700; white-space:nowrap}
+.lcd{margin-top:3px; background:var(--lcd-bg); color:var(--lc,var(--lcd-ink)); border-radius:7px; padding:5px 6px; text-align:right; white-space:nowrap;
+  font-family:ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; box-shadow:inset 0 2px 5px rgba(0,0,0,.55)}
+.lcd b{font-size:clamp(15px,4.4vw,21px); font-weight:600}
+.lcd i{font-style:normal; font-size:10.5px; margin-left:2px; opacity:.85}
+.m-gen{--cc:var(--c-gen); --lc:#ffcf40} .m-amp{--cc:var(--c-amp); --lc:#5dff9b} .m-tes{--cc:var(--c-tes); --lc:#53e6ff} .m-sol{--cc:var(--c-sol); --lc:#d6b8ff}
+
+.ctl{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:8px 10px 10px; box-shadow:0 4px 14px rgba(20,33,61,.08)}
+.cr{display:grid; grid-template-columns:20px 34px 1fr 34px 68px; gap:6px; align-items:center; margin-top:4px}
+.cr:first-child{margin-top:0}
+.cr label{font-weight:800; font-size:14px; color:var(--cc)}
+.cr output{text-align:right; font-variant-numeric:tabular-nums; font-size:13.5px; font-weight:600}
+.cr.g{--cc:var(--c-gen)} .cr.s{--cc:var(--c-sol)} .cr.l{--cc:var(--c-sol)}
+input[type=range]{width:100%; min-width:0; accent-color:var(--cc,var(--accent)); height:30px; margin:0}
+.step{width:34px; height:34px; border-radius:10px; border:1.5px solid var(--cc,var(--line)); background:var(--panel); color:var(--cc,var(--ink)); font-size:19px; font-weight:700; line-height:1; cursor:pointer; touch-action:manipulation; user-select:none}
+.step:active{transform:scale(.94)}
+.prow{display:flex; align-items:center; gap:10px; margin-top:8px}
+.sw{flex:1 1 auto; height:38px; border-radius:11px; border:1.5px solid var(--line); background:var(--panel); color:var(--ink); font-weight:700; font-size:14px; cursor:pointer}
+.sw[aria-pressed="true"]{background:linear-gradient(120deg,#12a150,#34d399); border-color:transparent; color:#fff}
+.led{flex:0 0 auto; display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted)}
+.led i{width:11px; height:11px; border-radius:50%; background:var(--line); display:inline-block}
+.led.on i{background:var(--amber); box-shadow:0 0 8px var(--amber)}
+.led.on{color:var(--amber); font-weight:700}
+.actions{display:flex; gap:8px; margin-top:8px}
+.btn{height:42px; padding:0 16px; border-radius:12px; border:none; background:linear-gradient(120deg,var(--accent),var(--accent2)); color:#fff; font-weight:700; font-size:14.5px; cursor:pointer; box-shadow:0 5px 14px rgba(37,99,235,.35)}
+.btn.main{flex:1 1 auto}
+.btn.ghost{background:var(--panel); border:1px solid var(--line); box-shadow:none; color:var(--ink)}
+.btn.st{background:linear-gradient(120deg,var(--st),var(--accent2))}
+.msg{min-height:1.3em; margin:6px 2px 0; font-size:13px; color:var(--muted)}
+.msg.err{color:var(--warn)}
+
+/* panneaux de résultats */
+.panel{background:var(--panel); border:1px solid var(--line); border-top:5px solid var(--st); border-radius:14px; padding:11px 12px; margin-top:12px; box-shadow:0 4px 14px rgba(20,33,61,.08)}
+.panel h2{margin:0 0 8px; font-size:16px; color:var(--st)}
+.tw{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; min-width:640px; font-variant-numeric:tabular-nums; font-size:13.5px}
+th,td{border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; white-space:nowrap}
+th{font-weight:700; color:var(--st); background:color-mix(in srgb,var(--st) 9%,transparent); font-size:12.5px}
+th:first-child,td:first-child{text-align:center}
+td button{border:none; background:transparent; color:var(--warn); font-size:16px; cursor:pointer; padding:2px 6px}
+.empty{color:var(--muted); font-size:13.5px; padding:6px 2px}
+.gbar{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px}
+.gtitle{margin:0; font-size:13.5px; color:var(--muted)}
+#graph{display:block; width:100%; height:auto}
+.res{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:8px}
+.kpi{border:1px solid color-mix(in srgb,var(--st) 40%,var(--line)); background:color-mix(in srgb,var(--st) 8%,transparent); border-radius:10px; padding:8px 11px}
+.kpi small{display:block; color:var(--muted); font-size:12.5px}
+.kpi b{font-size:clamp(16px,4.6vw,20px)}
+.verdict{margin-top:9px; padding:10px 12px; border-radius:10px; border:1px solid var(--line); font-size:14.5px}
+.verdict.ok{border-color:var(--ok); color:var(--ok); background:color-mix(in srgb,var(--ok) 13%,transparent)}
+.verdict.no{border-color:var(--amber); color:var(--amber); background:color-mix(in srgb,var(--amber) 15%,transparent)}
+.bilan{margin-top:12px; padding:12px 14px; border-radius:14px; background:linear-gradient(120deg,#12a150,#06b6d4); color:#fff; font-weight:600; box-shadow:0 6px 18px rgba(18,161,80,.35)}
+.bilan[hidden]{display:none}
+.steps{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; font-size:12.5px}
+.steps span{padding:3px 10px; border-radius:999px; border:1px solid var(--line); background:var(--card)}
+.steps span.done{background:var(--ok); border-color:var(--ok); color:#fff}
+details.panel summary{cursor:pointer; font-weight:700; color:var(--ink)}
+details.panel{border-top-color:var(--c-gen)}
+details ol{margin:8px 0 0; padding-left:20px}
+details li{margin:4px 0}
+.ori svg{display:block; max-width:340px; margin:8px auto 0}
+.hint{margin:6px 0 0; font-size:12.5px; color:var(--muted)}
+footer{margin-top:16px; padding:11px; border-radius:14px; background:linear-gradient(120deg,#2563eb,#7c3aed 60%,#ec4899); color:#fff; text-align:center; line-height:1.6; font-size:13.5px}
+footer b{color:#ffe08a}
+
+/* filigrane sur toute la page */
+.wm{position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:100; user-select:none}
+.wm-in{position:absolute; left:-30%; top:-30%; width:160%; height:160%; transform:rotate(-17deg); display:flex; flex-direction:column; justify-content:space-around; color:var(--wm); font-weight:800; font-size:clamp(18px,4.4vw,38px); line-height:1; white-space:nowrap}
+.wm-in span{display:block; text-align:center}
+
+/* scène */
+.wire{fill:none; stroke:var(--ink); stroke-width:2.6; stroke-linecap:round; stroke-linejoin:round; opacity:.75}
+.flow{fill:none; stroke:var(--flow); stroke-width:4; stroke-linecap:round; stroke-dasharray:1.5 13; opacity:0}
+.flow.run{opacity:.95; animation:mv var(--spd,1.4s) linear infinite}
+@keyframes mv{to{stroke-dashoffset:-14.5}}
+@media (prefers-reduced-motion: reduce){ .flow.run{animation:none} }
+.t{fill:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.tm{fill:var(--muted); font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (max-width:420px){ .page{padding:8px 8px 22px} .cr{grid-template-columns:18px 32px 1fr 32px 62px; gap:5px} .step{width:32px;height:32px} }
+</style>
+</head>
+<body data-study="I">
+<main class="page">
+  <header class="hero">
+    <div><div class="brand">Labo physiques by Ferjani Rafik</div><h1>Champ magnétique d’un solénoïde</h1></div>
+    <div class="tel">Prof&nbsp;: Ferjani Rafik &nbsp;•&nbsp; Tél&nbsp;: 28&nbsp;291&nbsp;953</div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Choix de l’étude">
+    <button class="tab" role="tab" data-s="I" aria-selected="true"><span class="nrm">‖<span class="vec">B</span>‖</span> = f(<i>I</i>)</button>
+    <button class="tab" role="tab" data-s="N" aria-selected="false"><span class="nrm">‖<span class="vec">B</span>‖</span> = f(<i>N</i>)</button>
+    <button class="tab" role="tab" data-s="L" aria-selected="false"><span class="nrm">‖<span class="vec">B</span>‖</span> = f(1/<i>L</i>)</button>
+  </nav>
+  <p class="consigne" id="consigne"></p>
+
+  <section class="dash" aria-label="Montage et mesures">
+    <div class="colL">
+      <div class="sceneBox">
+        <svg id="scene" viewBox="0 0 640 200" role="img" aria-label="Schéma du montage : générateur, ampèremètre, solénoïde et teslamètre">
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
+          </defs>
+          <rect x="20" y="60" width="80" height="90" rx="10" fill="var(--sol)" stroke="var(--c-gen)" stroke-width="2.5"/>
+          <text class="t" x="60" y="112" text-anchor="middle" font-size="32" font-weight="700">G</text>
+          <text class="tm" x="60" y="136" text-anchor="middle" font-size="14">continu</text>
+          <circle cx="60" cy="60" r="5.5" fill="var(--flow)"/><text class="t" x="74" y="56" font-size="20" font-weight="700">+</text>
+          <circle cx="60" cy="150" r="5.5" fill="var(--ink)"/><text class="t" x="74" y="168" font-size="22" font-weight="700">−</text>
+          <circle cx="200" cy="26" r="21" fill="var(--sol)" stroke="var(--c-amp)" stroke-width="2.5"/>
+          <text class="t" x="200" y="35" text-anchor="middle" font-size="26" font-weight="700">A</text>
+          <path id="w1" class="wire" d="M60 60 V26 H179"/>
+          <path id="w2" class="wire" d=""/>
+          <path id="w3" class="wire" d=""/>
+          <path id="f1" class="flow" d="M60 60 V26 H179"/>
+          <path id="f2" class="flow" d=""/>
+          <path id="f3" class="flow" d=""/>
+          <g id="sol"></g>
+          <rect x="548" y="73" width="84" height="64" rx="10" fill="var(--sol)" stroke="var(--c-tes)" stroke-width="2.5"/>
+          <text class="t" x="590" y="115" text-anchor="middle" font-size="30" font-weight="700">T</text>
+          <text class="tm" x="590" y="156" text-anchor="middle" font-size="14">teslamètre</text>
+          <g id="probe"></g>
+        </svg>
+      </div>
+      <div class="reads">
+        <div class="mini m-gen"><small>Tension</small><div class="lcd"><b id="vU">0,00</b><i>V</i></div></div>
+        <div class="mini m-amp"><small>Courant</small><div class="lcd"><b id="vI">0,000</b><i>A</i></div></div>
+        <div class="mini m-tes"><small class="nrm">‖<span class="vec">B</span>‖</small><div class="lcd"><b id="vB">0,00</b><i>mT</i></div></div>
+        <div class="mini m-sol"><small><i style="font-style:italic">n</i> = <i style="font-style:italic">N</i>/<i style="font-style:italic">L</i></small><div class="lcd"><b id="vn">0</b><i>m⁻¹</i></div></div>
+      </div>
+    </div>
+
+    <div class="colR">
+      <div class="ctl" aria-label="Boutons de réglage">
+        <div class="cr g">
+          <label for="rU">U</label>
+          <button class="step" id="uM" aria-label="Diminuer la tension">−</button>
+          <input id="rU" type="range" min="0" max="12" step="0.01" value="2">
+          <button class="step" id="uP" aria-label="Augmenter la tension">+</button>
+          <output id="oU">2,00 V</output>
+        </div>
+        <div class="cr s">
+          <label for="rN">N</label>
+          <button class="step" id="nM" aria-label="Moins de spires">−</button>
+          <input id="rN" type="range" min="100" max="1200" step="10" value="500">
+          <button class="step" id="nP" aria-label="Plus de spires">+</button>
+          <output id="oN">500</output>
+        </div>
+        <div class="cr l">
+          <label for="rL">L</label>
+          <button class="step" id="lM" aria-label="Diminuer la longueur">−</button>
+          <input id="rL" type="range" min="20" max="60" step="1" value="40">
+          <button class="step" id="lP" aria-label="Augmenter la longueur">+</button>
+          <output id="oL">40 cm</output>
+        </div>
+        <div class="prow">
+          <button class="sw" id="pw" aria-pressed="true">Générateur en marche</button>
+          <span class="led" id="cc"><i></i>limite 7 A</span>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn main st" id="rec">Marquer le point et l’enregistrer</button>
+        <button class="btn ghost" id="clr">Effacer</button>
+      </div>
+      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <details class="panel ori">
+    <summary>Orientation du montage et matériel</summary>
+    <svg viewBox="0 0 250 132" width="100%" role="img" aria-label="Vue de dessus : l’axe du solénoïde est perpendiculaire au plan méridien magnétique">
+      <defs><marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--flow)"/></marker></defs>
+      <line x1="125" y1="14" x2="125" y2="126" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="5 4"/>
+      <text class="t" x="132" y="24" font-size="15" font-weight="700">N</text>
+      <text class="tm" x="132" y="122" font-size="12.5">plan méridien</text>
+      <rect x="48" y="58" width="154" height="18" rx="3" fill="var(--sol)" stroke="var(--copper)" stroke-width="2"/>
+      <text class="tm" x="10" y="72" font-size="12.5">O</text><text class="tm" x="232" y="72" font-size="12.5">E</text>
+      <line x1="104" y1="112" x2="104" y2="34" stroke="var(--flow)" stroke-width="2.4" marker-end="url(#ah2)"/>
+      <text class="t" x="40" y="100" font-size="12.5">champ</text><text class="t" x="40" y="114" font-size="12.5">terrestre</text>
+    </svg>
+    <p class="hint">Vue de dessus : l’axe du solénoïde (Est–Ouest) est perpendiculaire au plan méridien magnétique. Le champ terrestre n’a aucune composante suivant l’axe : le teslamètre n’indique que le champ du solénoïde. Sonde au centre du solénoïde, parallèle à l’axe ; calibres automatiques 20 mT (0,01 mT) et 200 mT (0,1 mT) ; ampèremètre calibre 10 A (au-delà de 5 A, ne laissez pas le courant circuler longtemps).</p>
+  </details>
+
+  <section class="panel" id="pTab">
+    <h2 id="tTitle">Tableau de mesures</h2>
+    <div class="tw" id="tw"></div>
+  </section>
+
+  <section class="panel" id="pGr">
+    <h2>Courbe</h2>
+    <div class="gbar">
+      <p class="gtitle" id="gTitle"></p>
+      <button class="btn st" id="trace">Tracer la courbe</button>
+    </div>
+    <svg id="graph" viewBox="0 0 560 320" role="img" aria-label="Graphique de la norme du champ en fonction de la grandeur étudiée"></svg>
+  </section>
+
+  <section class="panel" id="pVer">
+    <h2>Vérification</h2>
+    <div class="res">
+      <div class="kpi"><small>Pente de la droite (mesurée)</small><b id="kk">—</b></div>
+      <div class="kpi"><small id="kTh">Valeur attendue</small><b id="k0">—</b></div>
+      <div class="kpi"><small>Écart relatif</small><b id="kg">—</b></div>
+    </div>
+    <div class="verdict" id="vd">Enregistrez au moins 3 points différents, puis appuyez sur « Tracer la courbe ».</div>
+  </section>
+
+  <div class="bilan" id="bilan" hidden></div>
+  <div class="steps" id="steps"></div>
+
+  <details class="panel">
+    <summary>Déroulement conseillé</summary>
+    <ol>
+      <li>Choisissez une étude (onglets en haut) et lisez la consigne : elle indique ce qui doit rester constant.</li>
+      <li>Réglez le montage, appuyez sur « Marquer le point et l’enregistrer » : la ligne s’ajoute au tableau et le point est marqué sur le graphique. Faites au moins 4 mesures.</li>
+      <li>Appuyez sur « Tracer la courbe » : la droite passant par l’origine s’affiche avec sa pente, comparée à la valeur attendue.</li>
+      <li>Recommencez avec les deux autres études, puis conclure sur la relation entre <span class="nrm">‖<span class="vec">B</span>‖</span>, <i>n</i> et <i>I</i>.</li>
+    </ol>
+  </details>
+
+  <footer><b>Labo physiques by Ferjani Rafik</b><br>Prof&nbsp;: Ferjani Rafik &nbsp;•&nbsp; Tél&nbsp;: 28&nbsp;291&nbsp;953</footer>
+</main>
+<div class="wm" aria-hidden="true"><div class="wm-in" id="wmIn"></div></div>
+
+<script>
+(function(){
+  "use strict";
+  var MU0=4*Math.PI*1e-7, DM=0.042, RHO=1.72e-8, DW=1.5e-3, RA=0.05, IMAX=7.0, MAXROWS=15, TOL=3;
+  var S={ N:500, Lcm:40, U:2.0, on:true, study:'I', rows:{I:[],N:[],L:[]}, traced:{I:false,N:false,L:false}, gap:{I:null,N:null,L:null} };
+
+  var ST={
+    I:{ name:'B = f(I)', color:'var(--c-tes)', cons:'<b>Étude de <span class="nrm">‖<span class="vec">B</span>‖</span> en fonction de <i>I</i></b> : gardez <i>N</i> et <i>L</i> constants, faites varier la tension <i>U</i>.',
+        x:function(r){return r.I;}, xlab:'I (A)', xt:'I (A)', unit:'T·A<sup>−1</sup>',
+        th:function(r0){return MU0*r0.n;}, thLab:'μ<sub>0</sub>·<i>n</i>',
+        concl:'<span class="nrm">‖<span class="vec">B</span>‖</span> est proportionnelle à <i>I</i>' },
+    N:{ name:'B = f(N)', color:'var(--c-sol)', cons:'<b>Étude de <span class="nrm">‖<span class="vec">B</span>‖</span> en fonction de <i>N</i></b> : gardez <i>L</i> et <i>I</i> constants. Après chaque changement de <i>N</i>, réajustez <i>U</i> pour retrouver la même intensité.',
+        x:function(r){return r.N;}, xlab:'N (spires)', xt:'N (spires)', unit:'T',
+        th:function(r0){return MU0*r0.I/(r0.Lcm/100);}, thLab:'μ<sub>0</sub>·<i>I</i>/<i>L</i>',
+        concl:'<span class="nrm">‖<span class="vec">B</span>‖</span> est proportionnelle à <i>N</i>' },
+    L:{ name:'B = f(1/L)', color:'var(--c-ori)', cons:'<b>Étude de <span class="nrm">‖<span class="vec">B</span>‖</span> en fonction de 1/<i>L</i></b> : gardez <i>N</i> et <i>I</i> constants, faites varier la longueur <i>L</i>. Réajustez <i>U</i> si l’intensité change.',
+        x:function(r){return 100/r.Lcm;}, xlab:'1/L (m⁻¹)', xt:'1/L (m<sup>−1</sup>)', unit:'T·m',
+        th:function(r0){return MU0*r0.N*r0.I;}, thLab:'μ<sub>0</sub>·<i>N</i>·<i>I</i>',
+        concl:'<span class="nrm">‖<span class="vec">B</span>‖</span> est proportionnelle à 1/<i>L</i>' }
+  };
+
+  function $(id){return document.getElementById(id);}
+  function fix(x,d){return x.toFixed(d).replace('.',',');}
+  function grp(s){var p=s.split(','); p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,'\u202f'); return p.join(',');}
+  function sci(v,d){
+    if(!isFinite(v)||v===0) return '0';
+    var e=Math.floor(Math.log10(Math.abs(v))), m=v/Math.pow(10,e);
+    if(Math.abs(Number(m.toFixed(d)))>=10){m/=10; e+=1;}
+    return m.toFixed(d).replace('.',',')+'×10<sup>'+String(e).replace('-','\u2212')+'</sup>';
+  }
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+  /* ---------- modèle physique : solénoïde réel de longueur finie, champ au centre ---------- */
+  function physics(){
+    var L=S.Lcm/100;
+    var Rw=RHO*S.N*Math.PI*DM/(Math.PI*Math.pow(DW/2,2)), Rt=Rw+RA;
+    var I=S.on?S.U/Rt:0, cc=false;
+    if(I>IMAX){I=IMAX; cc=true;}
+    return { L:L, I:I, cc:cc, Uout:I*Rt, B:MU0*S.N*I/Math.sqrt(L*L+DM*DM), n:S.N/L };
+  }
+  function readI(p){return Math.round(p.I*1000)/1000;}
+  function readU(p){return Math.round(p.Uout*100)/100;}
+  function readB(p){var m=p.B*1e3; return m<20?Math.round(m*100)/100:Math.round(m*10)/10;}
+  function fmtB(v){return v>=20?fix(v,1):fix(v,2);}
+  function fmtN(n){var r=Math.round(n); return grp(Math.abs(n-r)<0.05?String(r):n.toFixed(1).replace('.',','));}
+
+  /* ---------- scène compacte ---------- */
+  function buildScene(p){
+    var cx=330, yc=105, r=30, px=180+(p.L-0.2)*450, xl=cx-px/2, xr=cx+px/2;
+    var tc=Math.max(6,Math.min(60,Math.round(8+(p.n-167)/5833*52)));
+    var h='<rect x="'+xl+'" y="'+(yc-r)+'" width="'+px+'" height="'+(2*r)+'" rx="6" fill="var(--sol)" stroke="var(--c-sol)" stroke-width="2.5"/>';
+    for(var i=0;i<tc;i++){
+      var x=xl+8+i*(px-16)/(tc-1);
+      h+='<line x1="'+x.toFixed(1)+'" y1="'+(yc+r+3)+'" x2="'+(x+6).toFixed(1)+'" y2="'+(yc-r-3)+'" stroke="var(--copper)" stroke-width="2.4" stroke-linecap="round"/>';
+    }
+    h+='<line x1="'+(xl-14)+'" y1="'+yc+'" x2="'+(xr+14)+'" y2="'+yc+'" stroke="var(--muted)" stroke-width="1" stroke-dasharray="5 4"/>';
+    if(p.I>0){
+      var op=Math.max(.3,Math.min(1,.3+p.B/0.05*.7)).toFixed(2);
+      [-14,14].forEach(function(dy){ h+='<line x1="'+(xl+16)+'" y1="'+(yc+dy)+'" x2="'+(xr-16)+'" y2="'+(yc+dy)+'" stroke="var(--accent)" stroke-width="2.4" opacity="'+op+'" marker-end="url(#ah)"/>'; });
+    }
+    var yd=yc+r+16;
+    h+='<line x1="'+xl+'" y1="'+yd+'" x2="'+xr+'" y2="'+yd+'" stroke="var(--muted)" stroke-width="1.3"/>'+
+       '<line x1="'+xl+'" y1="'+(yd-6)+'" x2="'+xl+'" y2="'+(yd+6)+'" stroke="var(--muted)" stroke-width="1.3"/>'+
+       '<line x1="'+xr+'" y1="'+(yd-6)+'" x2="'+xr+'" y2="'+(yd+6)+'" stroke="var(--muted)" stroke-width="1.3"/>'+
+       '<text class="t" x="'+cx+'" y="'+(yd+22)+'" text-anchor="middle" font-size="17">L = '+fix(p.L,2)+' m</text>';
+    $('sol').innerHTML=h;
+    $('probe').innerHTML='<line x1="548" y1="'+yc+'" x2="'+cx+'" y2="'+yc+'" stroke="var(--probe)" stroke-width="5" stroke-linecap="round"/>'+
+      '<rect x="'+(cx-4)+'" y="'+(yc-9)+'" width="8" height="18" rx="2" fill="var(--c-tes)" stroke="var(--ink)" stroke-width="1"/>';
+    var d2='M221 26 H'+(xr+16)+' V'+(yc-r+8)+' H'+xr, d3='M'+xl+' '+(yc+r-8)+' H'+(xl-16)+' V188 H60 V150';
+    ['w2','f2'].forEach(function(id){$(id).setAttribute('d',d2);});
+    ['w3','f3'].forEach(function(id){$(id).setAttribute('d',d3);});
+    var run=p.I>0, spd=Math.max(.45,1.6/Math.max(p.I,.2)).toFixed(2)+'s';
+    ['f1','f2','f3'].forEach(function(id){var e=$(id); e.classList.toggle('run',run); e.style.setProperty('--spd',spd);});
+  }
+
+  function update(){
+    var p=physics();
+    $('oU').textContent=fix(S.U,2)+' V'; $('oN').textContent=String(S.N); $('oL').textContent=S.Lcm+' cm';
+    $('vn').textContent=fmtN(p.n); $('vU').textContent=fix(readU(p),2); $('vI').textContent=fix(readI(p),3); $('vB').textContent=fmtB(readB(p));
+    $('pw').setAttribute('aria-pressed',S.on?'true':'false'); $('pw').textContent=S.on?'Générateur en marche':'Générateur à l’arrêt';
+    $('cc').classList.toggle('on',p.cc);
+    buildScene(p);
+  }
+
+  /* ---------- étude : tableau, points, courbe, vérification ---------- */
+  function rowsOf(){return S.rows[S.study];}
+  function fit(){
+    var st=ST[S.study], rows=rowsOf(), sxy=0, sxx=0, d={};
+    rows.forEach(function(r){var x=st.x(r), y=r.B*1e-3; sxy+=x*y; sxx+=x*x; d[x.toFixed(4)]=1;});
+    return { k:sxx>0?sxy/sxx:null, distinct:Object.keys(d).length };
+  }
+  function ratioCol(r){
+    if(S.study==='I') return {h:'<i>B</i>/<i>I</i> (mT·A<sup>−1</sup>)', v:fix(r.B/r.I,3)};
+    if(S.study==='N') return {h:'<i>B</i>/<i>N</i> (µT)', v:fix(r.B*1000/r.N,3)};
+    return {h:'<i>B</i>·<i>L</i> (mT·m)', v:fix(r.B*r.Lcm/100,3)};
+  }
+  function renderTable(){
+    var rows=rowsOf(), w=$('tw'), st=ST[S.study];
+    $('tTitle').innerHTML='Tableau de mesures — <span class="nrm">‖<span class="vec">B</span>‖</span> en fonction de '+(S.study==='I'?'<i>I</i>':S.study==='N'?'<i>N</i>':'1/<i>L</i>');
+    if(!rows.length){ w.innerHTML='<div class="empty">Aucune mesure. Réglez le montage puis appuyez sur « Marquer le point et l’enregistrer ».</div>'; return; }
+    var rc0=ratioCol(rows[0]);
+    var h='<table><thead><tr><th>N°</th><th><i>N</i></th><th><i>L</i> (cm)</th>'+(S.study==='L'?'<th>1/<i>L</i> (m<sup>−1</sup>)</th>':'')+'<th><i>n</i> (m<sup>−1</sup>)</th><th><i>U</i> (V)</th><th><i>I</i> (A)</th>'+
+      '<th><span class="nrm">‖<span class="vec">B</span>‖</span> (mT)</th><th>'+rc0.h+'</th><th></th></tr></thead><tbody>';
+    rows.forEach(function(r,i){
+      h+='<tr><td>'+(i+1)+'</td><td>'+r.N+'</td><td>'+r.Lcm+'</td>'+(S.study==='L'?'<td>'+fix(100/r.Lcm,3)+'</td>':'')+'<td>'+fmtN(r.n)+'</td><td>'+fix(r.U,2)+'</td><td>'+fix(r.I,3)+'</td><td>'+fmtB(r.B)+'</td><td>'+ratioCol(r).v+'</td>'+
+         '<td><button data-i="'+i+'" aria-label="Supprimer la mesure '+(i+1)+'">×</button></td></tr>';
+    });
+    w.innerHTML=h+'</tbody></table>';
+  }
+  function niceMax(v){
+    if(v<=0) return 1;
+    var e=Math.pow(10,Math.floor(Math.log10(v))), m=v/e, t=[1,1.5,2,2.5,3,4,5,6,8,10];
+    for(var i=0;i<t.length;i++){ if(m<=t[i]) return t[i]*e; }
+    return 10*e;
+  }
+  function tf(v,max){ return max<2?fix(v,2):max<20?fix(v,1):fix(v,0); }
+  function renderGraph(){
+    var st=ST[S.study], rows=rowsOf(), g=$('graph'), W=560, H=320, L=60, R=16, T=14, Bm=46, pw=W-L-R, ph=H-T-Bm;
+    $('gTitle').innerHTML='<span class="nrm">‖<span class="vec">B</span>‖</span> (mT) en fonction de '+st.xt;
+    var xm=0.001, ym=0.001;
+    rows.forEach(function(r){xm=Math.max(xm,st.x(r)); ym=Math.max(ym,r.B);});
+    xm=niceMax(xm*1.1); ym=niceMax(ym*1.1);
+    function X(v){return L+v/xm*pw;} function Y(v){return T+ph-v/ym*ph;}
+    var h='';
+    for(var i=0;i<=5;i++){
+      var xv=xm*i/5, yv=ym*i/5;
+      h+='<line x1="'+X(xv)+'" y1="'+T+'" x2="'+X(xv)+'" y2="'+(T+ph)+'" stroke="var(--line)"/>';
+      h+='<line x1="'+L+'" y1="'+Y(yv)+'" x2="'+(L+pw)+'" y2="'+Y(yv)+'" stroke="var(--line)"/>';
+      h+='<text class="tm" x="'+X(xv)+'" y="'+(T+ph+17)+'" text-anchor="middle" font-size="12">'+tf(xv,xm)+'</text>';
+      h+='<text class="tm" x="'+(L-7)+'" y="'+(Y(yv)+4)+'" text-anchor="end" font-size="12">'+tf(yv,ym)+'</text>';
+    }
+    h+='<line x1="'+L+'" y1="'+(T+ph)+'" x2="'+(L+pw)+'" y2="'+(T+ph)+'" stroke="var(--ink)" stroke-width="1.6"/><line x1="'+L+'" y1="'+T+'" x2="'+L+'" y2="'+(T+ph)+'" stroke="var(--ink)" stroke-width="1.6"/>';
+    h+='<text class="t" x="'+(L+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="13">'+st.xlab+'</text>';
+    h+='<text class="t" x="14" y="'+(T+ph/2)+'" text-anchor="middle" font-size="13" transform="rotate(-90 14 '+(T+ph/2)+')">B (mT)</text>';
+    if(S.traced[S.study]){
+      var f=fit();
+      if(f.k!==null){
+        var yEnd=f.k*xm*1000, xEnd=xm;
+        if(yEnd>ym){ xEnd=ym/(f.k*1000); yEnd=ym; }
+        h+='<line x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(xEnd)+'" y2="'+Y(yEnd)+'" stroke="var(--flow)" stroke-width="2.4"/>';
+      }
+    }
+    rows.forEach(function(r){ h+='<circle cx="'+X(st.x(r))+'" cy="'+Y(r.B)+'" r="5.6" fill="'+st.color+'" stroke="var(--panel)" stroke-width="1.6"/>'; });
+    g.innerHTML=h;
+  }
+  function renderVerdict(){
+    var st=ST[S.study], rows=rowsOf(), vd=$('vd');
+    $('kTh').innerHTML='Valeur attendue ('+st.thLab+')';
+    if(!S.traced[S.study] || rows.length<3){
+      $('kk').textContent='—'; $('k0').textContent='—'; $('kg').textContent='—';
+      vd.className='verdict';
+      vd.textContent=rows.length<3?'Enregistrez au moins 3 points différents, puis appuyez sur « Tracer la courbe ».':'Les points sont marqués : appuyez sur « Tracer la courbe » pour obtenir la droite et la pente.';
+      return;
+    }
+    var f=fit(), kth=st.th(rows[0]), gap=(f.k-kth)/kth*100;
+    $('kk').innerHTML=sci(f.k,3)+' <small style="font-weight:400">'+st.unit+'</small>';
+    $('k0').innerHTML=sci(kth,3)+' <small style="font-weight:400">'+st.unit+'</small>';
+    $('kg').textContent=(gap>=0?'+':'−')+fix(Math.abs(gap),1)+' %';
+    S.gap[S.study]=gap;
+    if(Math.abs(gap)<=TOL){
+      vd.className='verdict ok';
+      vd.innerHTML='Les points sont alignés avec l’origine : '+st.concl+'. La pente mesurée est égale à '+st.thLab+' à '+fix(Math.abs(gap),1)+' % près, ce qui est compatible avec <span class="nrm">‖<span class="vec">B</span>‖</span> = μ<sub>0</sub>·<i>n</i>·<i>I</i>.';
+    } else {
+      vd.className='verdict no';
+      vd.innerHTML='Écart supérieur à '+TOL+' % : vérifiez que les grandeurs censées rester constantes l’ont bien été, que <i>I</i> ≥ 0,5 A et que <i>L</i> ≥ 30 cm.';
+    }
+  }
+  function renderSteps(){
+    var ok={}, all=true, h='';
+    ['I','N','L'].forEach(function(k){
+      ok[k]=S.traced[k] && S.rows[k].length>=3 && S.gap[k]!==null && Math.abs(S.gap[k])<=TOL;
+      if(!ok[k]) all=false;
+      h+='<span class="'+(ok[k]?'done':'')+'">'+(ok[k]?'✓ ':'')+ST[k].name+'</span>';
+    });
+    $('steps').innerHTML=h;
+    var b=$('bilan');
+    if(all){ b.hidden=false; b.innerHTML='Bilan : les trois études sont vérifiées. Le champ à l’intérieur du solénoïde est proportionnel à <i>I</i>, à <i>N</i> et à 1/<i>L</i> : <span class="nrm">‖<span class="vec">B</span>‖</span> = μ<sub>0</sub>·<i>n</i>·<i>I</i> avec <i>n</i> = <i>N</i>/<i>L</i> et μ<sub>0</sub> = 4π×10<sup>−7</sup> T·m·A<sup>−1</sup>.'; }
+    else b.hidden=true;
+  }
+  function renderAll(){
+    document.body.setAttribute('data-study',S.study);
+    $('consigne').innerHTML=ST[S.study].cons;
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){t.setAttribute('aria-selected',t.getAttribute('data-s')===S.study?'true':'false');});
+    renderTable(); renderGraph(); renderVerdict(); renderSteps();
+  }
+
+  /* ---------- actions ---------- */
+  function say(t,err){var m=$('msg'); m.textContent=t; m.className='msg'+(err?' err':'');}
+  function record(){
+    var p=physics(), rows=rowsOf(), st=ST[S.study];
+    if(!S.on||readI(p)<=0){ say('Mettez le générateur en marche et réglez une tension non nulle.',true); return; }
+    if(rows.length>=MAXROWS){ say('Tableau plein (15 mesures) : effacez-le pour recommencer.',true); return; }
+    var row={N:S.N,Lcm:S.Lcm,n:p.n,U:readU(p),I:readI(p),B:readB(p)};
+    if(rows.length){
+      var r0=rows[0];
+      if(S.study==='I' && (row.N!==r0.N||row.Lcm!==r0.Lcm)){ say('Dans cette étude, N et L doivent rester constants (N = '+r0.N+', L = '+r0.Lcm+' cm). Rétablissez-les ou effacez le tableau.',true); return; }
+      if(S.study==='N' && row.Lcm!==r0.Lcm){ say('Dans cette étude, L doit rester constante ('+r0.Lcm+' cm).',true); return; }
+      if(S.study==='L' && row.N!==r0.N){ say('Dans cette étude, N doit rester constant ('+r0.N+' spires).',true); return; }
+      if(S.study!=='I' && Math.abs(row.I-r0.I)/r0.I*100>TOL){ say('Gardez l’intensité constante : I = '+fix(r0.I,3)+' A (± '+TOL+' %). Réglez U pour l’obtenir, puis enregistrez.',true); return; }
+      for(var i=0;i<rows.length;i++){ if(Math.abs(st.x(rows[i])-st.x(row))<1e-6){ say('Cette valeur est déjà enregistrée : changez la grandeur étudiée.',true); return; } }
+    }
+    rows.push(row); S.traced[S.study]=false; S.gap[S.study]=null;
+    say('Point '+rows.length+' marqué et enregistré.',false);
+    renderAll();
+  }
+  $('rec').addEventListener('click',record);
+  $('trace').addEventListener('click',function(){
+    var rows=rowsOf(), f=fit();
+    if(rows.length<3||f.distinct<3){ say('Il faut au moins 3 points différents pour tracer la courbe.',true); return; }
+    S.traced[S.study]=true; say('Courbe tracée.',false); renderAll();
+    $('pVer').scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  $('clr').addEventListener('click',function(){ S.rows[S.study]=[]; S.traced[S.study]=false; S.gap[S.study]=null; say('Tableau de cette étude effacé.',false); renderAll(); });
+  $('tw').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-i]'); if(!b) return;
+    rowsOf().splice(parseInt(b.getAttribute('data-i'),10),1); S.traced[S.study]=false; S.gap[S.study]=null; renderAll();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){
+    t.addEventListener('click',function(){ S.study=t.getAttribute('data-s'); say('',false); renderAll(); });
+  });
+  $('pw').addEventListener('click',function(){S.on=!S.on; update();});
+
+  /* curseurs et boutons ± avec répétition quand on reste appuyé */
+  function bind(idR,key,idM,idP,step,min,max,dec){
+    var r=$(idR);
+    function set(v){ S[key]=clamp(+(v).toFixed(dec),min,max); r.value=S[key]; update(); }
+    r.addEventListener('input',function(){ S[key]=parseFloat(r.value); update(); });
+    [[idM,-1],[idP,1]].forEach(function(a){
+      var b=$(a[0]), t1=null, t2=null;
+      function stop(){ clearTimeout(t1); clearInterval(t2); }
+      b.addEventListener('pointerdown',function(e){ e.preventDefault(); set(S[key]+a[1]*step); t1=setTimeout(function(){ t2=setInterval(function(){ set(S[key]+a[1]*step); },70); },380); });
+      ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ b.addEventListener(ev,stop); });
+      b.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); set(S[key]+a[1]*step); } });
+    });
+  }
+  bind('rU','U','uM','uP',0.05,0,12,2);
+  bind('rN','N','nM','nP',10,100,1200,0);
+  bind('rL','Lcm','lM','lP',1,20,60,0);
+
+  (function(){
+    var t='Labo physiques by Ferjani Rafik', r='';
+    for(var i=0;i<20;i++){ r+='<span style="transform:translateX('+(i%2?'-9%':'0')+')">'+t+' &nbsp;&nbsp;&nbsp;&nbsp; '+t+' &nbsp;&nbsp;&nbsp;&nbsp; '+t+'</span>'; }
+    $('wmIn').innerHTML=r;
+  })();
+  update(); renderAll();
+})();
+</script>
+</body>
+</html>
