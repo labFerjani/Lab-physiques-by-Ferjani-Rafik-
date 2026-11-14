@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulation interactive — Dosage pH-métrique</title>
+<style>
+:root{--ink:#183044;--muted:#4f6575;--line:#d6e0e8;--blue:#1677c8;--pale:#eef6fc;--orange:#e98b32;--green:#16845b;--red:#e05e44;--fs:16px}
+*{box-sizing:border-box}html{font-size:var(--fs)}
+body{margin:0;font-family:"Segoe UI",Tahoma,Arial,Helvetica,sans-serif;background:#f3f6f9;color:var(--ink);line-height:1.45}
+body.proj{--fs:19px}
+header{background:#12324b;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:clamp(1.25rem,3vw,1.8rem);margin:0}
+.author{margin:2px 0 0;font-weight:600;color:#fff;font-size:1.08rem}.author span{font-weight:800;font-size:1.18rem}
+main{max-width:1280px;margin:auto;padding:16px;display:grid;gap:14px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 2px 8px #17324a0b;min-width:0}
+h2{font-size:1.15rem;margin:0 0 12px}h3{font-size:1rem;margin:0 0 8px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.control{padding:10px;background:#f8fafc;border:1px solid #e3eaf0;border-radius:10px}
+label{display:flex;justify-content:space-between;gap:8px;font-weight:600;font-size:.92rem;margin-bottom:7px}
+select,input[type=number]{width:100%;padding:9px;border:1px solid #bdcbd7;border-radius:7px;font:inherit;background:#fff}
+input[type=range]{width:100%;height:32px;accent-color:var(--blue)}
+.small{font-size:.85rem;color:var(--muted)}.value{color:var(--blue);font-variant-numeric:tabular-nums;white-space:nowrap}
+button{border:0;border-radius:8px;padding:11px 14px;min-height:44px;font:inherit;font-weight:700;cursor:pointer;background:var(--blue);color:#fff}
+button.secondary{background:#eaf1f7;color:#173b56;border:1px solid #cbd9e5}
+header button.secondary{background:#1d4766;color:#fff;border-color:#3d6a8a}
+button:active{transform:translateY(1px)}
+button.active-mode{background:#16845b;color:#fff;border-color:#0f6b49}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.warn{margin-top:8px;color:#9a4b00;font-weight:600;min-height:1.2em}
+.labgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr);gap:14px}
+.resgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr);gap:14px;align-items:start}
+svg{width:100%;height:auto;display:block;background:linear-gradient(#fbfdff,#f4f8fb);border:1px solid #e0e8ef;border-radius:10px}
+.readouts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.metric{border-radius:10px;background:#f2f7fb;padding:12px;border:1px solid #e1eaf1}
+.metric .name{font-size:.83rem;color:var(--muted)}.metric .num{font-size:1.4rem;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.status{padding:10px 12px;border-radius:9px;background:#eef8f2;border:1px solid #c9e8d7;margin-top:10px}
+canvas{width:100%;height:auto;aspect-ratio:1000/430;display:block;border:1px solid #e0e8ef;border-radius:10px;background:#fff}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:.9rem}th,td{text-align:left;padding:8px;border-bottom:1px solid #e7edf2}th{background:#f5f8fb;position:sticky;top:0}
+.tablewrap{overflow:auto;max-height:340px}
+.note{border-left:4px solid var(--orange);padding:9px 12px;background:#fff8ef;border-radius:0 8px 8px 0;font-size:.92rem}
+footer{color:#556879;font-size:.82rem;text-align:center;padding:0 10px 20px}
+@media(max-width:900px){.labgrid,.resgrid{grid-template-columns:1fr}}
+@media(max-width:600px){main{padding:10px}.panel{padding:12px}.readouts{grid-template-columns:1fr 1fr}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.lab{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,.9fr);gap:14px;align-items:start}
+.side{display:grid;gap:14px}.montage svg{height:min(82vh,780px);background:linear-gradient(#fbfdff,#eef5fa)}
+.cmd .controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.cmd .control{padding:8px}
+.cmd .buttons button{flex:1 1 calc(50% - 8px)}
+body::after{content:"FERJANI RAFIK";position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font:900 clamp(3rem,11vw,9rem)/1 "Segoe UI",Arial,sans-serif;letter-spacing:.06em;color:rgba(18,50,75,.11);transform:rotate(-24deg);pointer-events:none;z-index:50;white-space:nowrap;user-select:none}
+@media(max-width:900px){.lab{grid-template-columns:1fr}.montage svg{height:auto;max-height:70vh}}
+@media(max-width:480px){.cmd .controls{grid-template-columns:1fr}}
+.indicator-swatch{display:inline-block;width:18px;height:18px;border-radius:4px;border:1px solid #aaa;vertical-align:middle;margin-left:6px}
+.tangent-info{margin-top:10px;padding:10px;background:#f0f7ff;border:1px solid #c5d9ef;border-radius:8px;font-size:.92rem}
+</style>
+</head>
+<body>
+
+
+<header>
+  <div><h1>Simulation pH-métrique</h1>
+  <p class="author">by <span>Ferjani Rafik</span></p></div>
+  <button id="proj" class="secondary" aria-pressed="false">Mode projecteur</button>
+</header>
+<main>
+<section class="lab">
+<div class="panel montage"><h2>Montage expérimental</h2>
+<svg viewBox="0 0 560 600" role="img" aria-label="Montage de dosage : burette graduée de 0 à 50 mL avec robinet, bécher gradué avec barreau aimanté sur agitateur, électrode de pH reliée au pH-mètre">
+<defs>
+<linearGradient id="glass" x1="0" x2="1"><stop offset="0" stop-color="#bfe0ee" stop-opacity=".7"/><stop offset=".35" stop-color="#fff" stop-opacity=".35"/><stop offset=".7" stop-color="#e8f4fa" stop-opacity=".15"/><stop offset="1" stop-color="#9cc9de" stop-opacity=".7"/></linearGradient>
+<linearGradient id="acidLiquid" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8cc9ed" stop-opacity=".85"/><stop offset="1" stop-color="#2786bf" stop-opacity=".95"/></linearGradient>
+<linearGradient id="baseLiquid" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#edc85f" stop-opacity=".9"/><stop offset="1" stop-color="#d4a017" stop-opacity=".95"/></linearGradient>
+<linearGradient id="steel" x1="0" x2="1"><stop offset="0" stop-color="#a9b8c2"/><stop offset=".5" stop-color="#e6edf1"/><stop offset="1" stop-color="#8a9ba7"/></linearGradient>
+<clipPath id="beakerClip"><path d="M171 426 L178 540 Q179 547 187 547 L313 547 Q321 547 322 540 L329 426Z"/></clipPath>
+</defs>
+<!-- Statif, noix et pince -->
+<rect x="20" y="570" width="150" height="16" rx="4" fill="url(#steel)" stroke="#607585"/>
+<rect x="50" y="24" width="11" height="548" rx="3" fill="url(#steel)" stroke="#607585"/>
+<rect x="56" y="150" width="150" height="8" rx="3" fill="url(#steel)" stroke="#607585"/>
+<rect x="200" y="140" width="38" height="28" rx="4" fill="#5b7384"/><rect x="262" y="140" width="14" height="28" rx="4" fill="#5b7384"/>
+<rect x="238" y="148" width="24" height="12" fill="#5b7384"/>
+<!-- Burette : 0 mL en y=56, 50 mL en y=326 (5,4 px/mL) -->
+<path d="M232 26 L268 26 L262 40 L238 40Z" fill="url(#glass)" stroke="#4f7e97" stroke-width="2"/>
+<rect x="238" y="40" width="24" height="304" fill="url(#glass)" stroke="#4f7e97" stroke-width="2"/>
+<!-- Liquide burette : hauteur max 270 px pour 50 mL (y de 56 à 326) -->
+<rect id="buretteLiquid" x="241" y="56" width="18" height="270" fill="url(#baseLiquid)"/>
+<ellipse cx="250" cy="56" rx="9" ry="2.5" fill="none" stroke="#b58a1f" stroke-width="1.5" id="meniscus"/>
+<g id="ticks" stroke="#2e566d" fill="#28485c" font-size="11"></g>
+<text x="284" y="78" font-size="15" font-weight="bold" fill="#28485c">Burette graduée</text>
+<text x="284" y="97" font-size="13" fill="#4f6575" id="svgBaseName">NaOH (base forte)</text>
+<text x="284" y="114" font-size="12" fill="#4f6575">0 à 50 mL</text>
+<!-- Robinet -->
+<rect x="241" y="344" width="18" height="22" rx="3" fill="url(#steel)" stroke="#526a79" stroke-width="1.5"/>
+<rect x="259" y="350" width="46" height="8" rx="4" fill="#e98b32" stroke="#a85d10"/>
+<circle cx="250" cy="355" r="3" fill="#526a79"/>
+<text x="310" y="358" font-size="12" fill="#4f6575">Robinet</text>
+<path d="M243 366 L257 366 L252.5 394 L250 398 L247.5 394Z" fill="url(#glass)" stroke="#4f7e97" stroke-width="1.5"/>
+<path id="drop" d="M250 402 C244 410 245 415 250 416 C255 415 256 410 250 402Z" fill="#e8b642" opacity="0"/>
+<!-- Bécher gradué -->
+<g clip-path="url(#beakerClip)">
+  <rect id="beakerLiquid" x="160" y="526" width="180" height="22" fill="url(#acidLiquid)"/>
+  <rect x="234" y="535" width="32" height="9" rx="4.5" fill="#fff" opacity=".9" stroke="#8aa0ae"/>
+</g>
+<ellipse id="beakerSurface" cx="250" cy="526" rx="76" ry="3.5" fill="#bfe3f5" stroke="#237fb5" stroke-width="1.5" opacity=".9"/>
+<path d="M168 420 L176 540 Q177 548 187 548 L313 548 Q323 548 324 540 L332 420" fill="url(#glass)" stroke="#4f7e97" stroke-width="2.5"/>
+<path d="M162 418 L338 418" stroke="#4f7e97" stroke-width="3" stroke-linecap="round"/>
+<g stroke="#4f7e97" fill="#4f6575" font-size="10"><path d="M176 519h14M176 490h14M176 462h14M176 433h14"/><text x="194" y="523">25</text><text x="194" y="494">50</text><text x="194" y="466">75</text><text x="194" y="437">100 mL</text></g>
+<text x="345" y="500" font-size="13" font-weight="bold" fill="#28485c">Bécher</text>
+<text x="345" y="518" font-size="13" fill="#4f6575" id="svgAcidName">Solution d’acide</text>
+<!-- Agitateur magnétique -->
+<rect x="140" y="552" width="220" height="34" rx="7" fill="#c4d0d8" stroke="#6e8796" stroke-width="2"/>
+<circle cx="170" cy="569" r="7" fill="#243f50"/><circle cx="330" cy="569" r="4" fill="#3ec97f"/>
+<text x="250" y="573" text-anchor="middle" font-size="11" fill="#29495d">Agitateur magnétique</text>
+<!-- Support de l’électrode -->
+<rect x="498" y="380" width="10" height="190" rx="3" fill="url(#steel)" stroke="#607585"/>
+<rect x="430" y="570" width="140" height="16" rx="4" fill="url(#steel)" stroke="#607585"/>
+<rect x="302" y="388" width="200" height="7" rx="3" fill="url(#steel)" stroke="#607585"/>
+<!-- Électrode de pH -->
+<rect x="293" y="376" width="14" height="14" rx="3" fill="#3b4f5c"/>
+<rect x="296" y="388" width="8" height="136" fill="#eef3f6" stroke="#657782" stroke-width="1.5"/>
+<ellipse cx="300" cy="530" rx="7" ry="9" fill="#f4f7f9" stroke="#657782" stroke-width="1.5"/>
+<text x="345" y="446" font-size="12" fill="#28485c" visibility="hidden">.</text>
+<text x="372" y="410" font-size="12" font-weight="bold" fill="#28485c">Électrode de pH</text>
+<path d="M300 376 C300 330 400 340 410 280" fill="none" stroke="#647b8a" stroke-width="3"/>
+<!-- pH-mètre -->
+<rect x="340" y="150" width="210" height="130" rx="12" fill="#d7e1e7" stroke="#607d8e" stroke-width="2.5"/>
+<rect x="354" y="164" width="182" height="64" rx="7" fill="#152d3a"/>
+<text x="366" y="183" fill="#a8c9d4" font-size="12">pH</text>
+<text id="svgPH" x="470" y="215" fill="#91f0bd" font-size="30" text-anchor="middle" font-weight="bold">1,00</text>
+<circle cx="366" cy="250" r="6" fill="#5f8ea8"/><circle cx="388" cy="250" r="6" fill="#5f8ea8"/>
+<text x="410" y="255" font-size="14" fill="#28485c">pH-mètre</text>
+</svg>
+</div>
+<div class="side">
+<div class="panel cmd"><h2>Commandes</h2>
+<div class="controls">
+<div class="control"><label for="acidType">Acide</label><select id="acidType">
+      <option value="hcl">Acide chlorhydrique — HCl (fort)</option>
+      <option value="hno3">Acide nitrique — HNO₃ (fort)</option>
+      <option value="hbr">Acide bromhydrique — HBr (fort)</option>
+      <option value="ch3cooh">Acide éthanoïque — CH₃COOH (faible)</option>
+      <option value="hcooh">Acide méthanoïque — HCOOH (faible)</option>
+      <option value="hf">Acide fluorhydrique — HF (faible)</option>
+    </select></div>
+<div class="control"><label for="baseType">Base</label><select id="baseType">
+      <option value="naoh">Hydroxyde de sodium — NaOH (forte)</option>
+      <option value="koh">Hydroxyde de potassium — KOH (forte)</option>
+      <option value="nh3">Ammoniac — NH₃ (faible)</option>
+      <option value="ch3nh2">Méthylamine — CH₃NH₂ (faible)</option>
+      <option value="pyridine">Pyridine — C₅H₅N (faible)</option>
+    </select></div>
+<div class="control"><label for="titrationMode">Sens du dosage</label><select id="titrationMode">
+      <option value="acid_by_base">Acide dosé par la base (base dans la burette)</option>
+      <option value="base_by_acid">Base dosée par l’acide (acide dans la burette)</option>
+    </select></div>
+<div class="control"><label for="ca">C<sub>A</sub> acide <span class="value" id="caVal">0,100 mol·L⁻¹</span></label><input id="ca" type="range" min="0.02" max="0.2" step="0.005" value="0.1"></div>
+<div class="control"><label for="cb">C<sub>B</sub> base <span class="value" id="cbVal">0,100 mol·L⁻¹</span></label><input id="cb" type="range" min="0.02" max="0.2" step="0.005" value="0.1"></div>
+<div class="control"><label for="va" id="vaLabel">V<sub>A</sub> (bécher) <span class="value" id="vaVal">20,0 mL</span></label><input id="va" type="range" min="10" max="40" step="1" value="20"></div>
+<div class="control"><label for="vol" id="volLabel">V versé (burette) <span class="value" id="volVal">0,0 mL</span></label><input id="vol" type="range" min="0" max="50" step="0.5" value="0"></div>
+<div class="control"><label for="indicator">Indicateur coloré <span class="indicator-swatch" id="indSwatch" style="background:#ccc"></span></label>
+<select id="indicator">
+  <option value="none">Aucun (solution claire)</option>
+  <option value="phenolphtaleine">Phénolphtaléine (8,2 – 10,0)</option>
+  <option value="helianthine">Hélianthine / méthyl orange (3,1 – 4,4)</option>
+  <option value="btb">Bleu de bromothymol (6,0 – 7,6)</option>
+  <option value="rouge_methyle">Rouge de méthyle (4,2 – 6,2)</option>
+  <option value="bleu_thymol">Bleu de thymol (8,0 – 9,6)</option>
+</select>
+</div>
+</div>
+<div class="buttons">
+  <button id="add">+ 1,0 mL</button>
+  <button id="add5" class="secondary">+ 5,0 mL</button>
+  <button id="eq" class="secondary">Aller à l’équivalence</button>
+  <button id="savePoint">Confirmer la mesure</button>
+  <button id="drawCurve" class="secondary">Tracer la courbe</button>
+  <button id="drawTangents" class="secondary">Tangente suivante</button>
+  <button id="resetTangents" class="secondary">Effacer tangentes</button>
+  <button id="clearPoints" class="secondary">Effacer les points</button>
+  <button id="reset" class="secondary">Réinitialiser</button>
+</div>
+<div class="warn" id="warn" role="status"></div>
+<div class="tangent-info" id="tangentInfo" style="display:none"></div>
+</div>
+<div class="panel"><h2>Mesures</h2>
+<div class="readouts">
+<div class="metric"><div class="name">pH mesuré (modèle)</div><div class="num" id="phNow" aria-live="polite">1,00</div></div>
+<div class="metric"><div class="name" id="volName">Volume versé</div><div class="num" id="vbNow">0,0 mL</div></div>
+<div class="metric"><div class="name">Volume à l’équivalence</div><div class="num" id="veNow">20,0 mL</div></div>
+<div class="metric"><div class="name">État du dosage</div><div class="num" style="font-size:1.05rem" id="stateNow">Avant équivalence</div></div>
+</div>
+<div class="status" id="explain"></div>
+<p id="reaction" style="text-align:center;margin:10px 0 2px"></p>
+<p class="small" style="margin:0">Modèle à 25 °C. Les équilibres des espèces faibles sont pris en compte de façon simplifiée.</p>
+</div></div>
+</section>
+
+<section class="panel resgrid">
+ <div>
+  <h2>Courbe de dosage pH = f(V<sub>B</sub>)</h2>
+  <div class="chartwrap"><canvas id="chart" width="1000" height="430" role="img" aria-label="Courbe pH en fonction du volume de base versé"></canvas></div>
+  <div class="legend">
+    <span><i style="background:#1677c8"></i>Courbe idéale</span>
+    <span><i style="background:#e05e44"></i>Point actuel</span>
+    <span><i style="background:#16845b"></i>Points enregistrés</span>
+    <span><i style="background:#c0392b"></i>T₁ / T₂ (équivalence)</span>
+    <span><i style="background:#1abc9c"></i>T₁ / T₂ (demi-équivalence)</span>
+    <span><i style="background:#8e44ad"></i>Parallèle → inflexion</span>
+  </div>
+  <div class="small">Fort/fort : 1 inflexion (V<sub>E</sub>). Faible/fort : 2 inflexions (demi-équivalence puis V<sub>E</sub>). Pour chaque inflexion : T₁ (1<sup>re</sup> concavité) → T₂ (2<sup>e</sup>) → parallèle équidistante.</div>
+ </div>
+  <div>
+   <h3>Tableau de mesures</h3>
+   <div class="tablewrap"><table><thead><tr><th>N°</th><th>V<sub>B</sub> (mL)</th><th>pH</th><th>Situation</th></tr></thead><tbody id="dataRows"><tr><td colspan="4" class="small">Aucun point enregistré. Cliquez sur « Confirmer la mesure ».</td></tr></tbody></table></div>
+  </div>
+ </section>
+
+<section class="panel">
+  <h2>Exploitation des résultats</h2>
+  <div class="controls">
+    <div class="control"><h3>À l’équivalence</h3><p id="eqCalc" style="margin:0">n(acide) = n(base)</p></div>
+    <div class="control"><h3>Concentration déduite</h3><p id="calcConc" style="margin:0">C<sub>A</sub> = C<sub>B</sub> × V<sub>E</sub> / V<sub>A</sub></p></div>
+    <div class="control"><h3>Relation attendue</h3><p style="margin:0" id="relExpected">C<sub>A</sub> V<sub>A</sub> = C<sub>B</sub> V<sub>E</sub></p></div>
+  </div>
+  <div class="note" style="margin-top:12px"><b>À retenir :</b> à l’équivalence, les quantités introduites sont stœchiométriques pour ce dosage 1:1. Le pH à l’équivalence dépend de la nature de l’acide et de la base : il est voisin de 7 pour fort/fort, supérieur à 7 pour faible/fort et inférieur à 7 pour fort/faible. Pour un acide faible / base forte, la demi-équivalence (V<sub>B</sub> = V<sub>E</sub>/2) donne pH = pK<sub>a</sub>.</div>
+</section>
+<footer>Simulation pédagogique autonome — fonctionne dans un navigateur sans connexion Internet. Le montage est schématique et le pH est calculé par un modèle théorique, pas mesuré par un capteur réel.</footer>
+</main>
+<script>
+/* Module de calcul pur */
+const DosageCalc=(()=>{
+  const ACIDS={
+    hcl:{strength:'strong',name:'HCl (acide fort)',formula:'HCl',conjugate:'Cl⁻'},
+    hno3:{strength:'strong',name:'HNO₃ (acide fort)',formula:'HNO₃',conjugate:'NO₃⁻'},
+    hbr:{strength:'strong',name:'HBr (acide fort)',formula:'HBr',conjugate:'Br⁻'},
+    ch3cooh:{strength:'weak',pKa:4.76,name:'CH₃COOH (acide faible)',formula:'CH₃COOH',conjugate:'CH₃COO⁻'},
+    hcooh:{strength:'weak',pKa:3.75,name:'HCOOH (acide faible)',formula:'HCOOH',conjugate:'HCOO⁻'},
+    hf:{strength:'weak',pKa:3.17,name:'HF (acide faible)',formula:'HF',conjugate:'F⁻'}};
+  const BASES={
+    naoh:{strength:'strong',name:'NaOH (base forte)',formula:'HO⁻',conjugate:'Na⁺'},
+    koh:{strength:'strong',name:'KOH (base forte)',formula:'HO⁻',conjugate:'K⁺'},
+    nh3:{strength:'weak',pKa:9.25,name:'NH₃ (base faible)',formula:'NH₃',conjugate:'NH₄⁺'},
+    ch3nh2:{strength:'weak',pKa:10.64,name:'CH₃NH₂ (base faible)',formula:'CH₃NH₂',conjugate:'CH₃NH₃⁺'},
+    pyridine:{strength:'weak',pKa:5.25,name:'C₅H₅N (base faible)',formula:'C₅H₅N',conjugate:'C₅H₅NH⁺'}};
+  // mode: 'acid_by_base' → base in burette, acid in beaker ; 'base_by_acid' → acid in burette, base in beaker
+  // ve = volume of titrant in burette at equivalence
+  const ve=p=>{
+    if(p.mode==='base_by_acid') return p.cb*p.va/p.ca; // VA is volume of base in beaker
+    return p.ca*p.va/p.cb; // VA is volume of acid in beaker
+  };
+  function chemistry(p){
+    const a=ACIDS[p.acid],b=BASES[p.base];
+    return {acidKa:a.strength==='weak'?10**(-a.pKa):null,baseKa:b.strength==='weak'?10**(-b.pKa):null,
+      acidStrength:a.strength,baseStrength:b.strength,acidName:a.name,baseName:b.name,
+      acidFormula:a.formula,acidConjugate:a.conjugate,baseFormula:b.formula,baseConjugate:b.conjugate,
+      pKa:a.strength==='weak'?a.pKa:null};
+  }
+  function phAt(v,p){
+    const ch=chemistry(p),totalVol=(p.va+v)/1000;
+    // v = volume from burette ; p.va = volume in beaker
+    let ctA, ctB;
+    if(p.mode==='base_by_acid'){
+      // acid in burette (titrant), base in beaker
+      ctA=p.ca*v/1000/totalVol;
+      ctB=p.cb*p.va/1000/totalVol;
+    }else{
+      // base in burette (titrant), acid in beaker (default)
+      ctA=p.ca*p.va/1000/totalVol;
+      ctB=p.cb*v/1000/totalVol;
+    }
+    const strongAcid=ch.acidStrength==='strong'?ctA:0,weakAcid=ch.acidStrength==='weak'?ctA:0;
+    const strongBase=ch.baseStrength==='strong'?ctB:0,weakBase=ch.baseStrength==='weak'?ctB:0;
+    const kw=1e-14;
+    function chargeBalance(ph){
+      const H=10**(-ph),OH=kw/H;
+      const Aminus=weakAcid*(ch.acidKa||0)/((ch.acidKa||0)+H);
+      const BHplus=weakBase*H/(H+(ch.baseKa||1e-14));
+      return H+strongBase+BHplus-OH-strongAcid-Aminus;
+    }
+    let lo=0,hi=14;
+    for(let i=0;i<100;i++){const mid=(lo+hi)/2;if(chargeBalance(mid)>0)lo=mid;else hi=mid;}
+    return Math.max(0,Math.min(14,(lo+hi)/2));
+  }
+  const stateFor=(v,e)=>Math.abs(v-e)<0.26?"À l’équivalence":(v<e?"Avant équivalence":"Après équivalence");
+  function reactionHTML(ch){
+    if(ch.acidStrength==='strong'&&ch.baseStrength==='strong')return 'H₃O⁺ + HO⁻ → 2 H₂O';
+    if(ch.acidStrength==='weak'&&ch.baseStrength==='strong')return ch.acidFormula+' + HO⁻ → '+ch.acidConjugate+' + H₂O';
+    if(ch.acidStrength==='strong'&&ch.baseStrength==='weak')return 'H₃O⁺ + '+ch.baseFormula+' → '+ch.baseConjugate+' + H₂O';
+    return ch.acidFormula+' + '+ch.baseFormula+' ⇌ '+ch.acidConjugate+' + '+ch.baseConjugate;
+  }
+  return {ACIDS,BASES,ve,chemistry,phAt,stateFor,reactionHTML};
+})();
+if(typeof module!=='undefined')module.exports=DosageCalc;
+</script>
+<script>
+const INDICATORS={
+  none:{name:'Aucun', colorAt:()=>null},
+  phenolphtaleine:{name:'Phénolphtaléine', low:8.2, high:10.0,
+    colorAt:ph=>{if(ph<8.2)return '#f5f5f5';if(ph>10)return '#e91e8c';const t=(ph-8.2)/1.8;return lerpColor('#f5f5f5','#e91e8c',t);}},
+  helianthine:{name:'Hélianthine', low:3.1, high:4.4,
+    colorAt:ph=>{if(ph<3.1)return '#e74c3c';if(ph>4.4)return '#f1c40f';const t=(ph-3.1)/1.3;return lerpColor('#e74c3c','#f1c40f',t);}},
+  btb:{name:'Bleu de bromothymol', low:6.0, high:7.6,
+    colorAt:ph=>{if(ph<6.0)return '#f1c40f';if(ph>7.6)return '#2980b9';const t=(ph-6.0)/1.6;return lerpColor('#f1c40f','#2980b9',t);}},
+  rouge_methyle:{name:'Rouge de méthyle', low:4.2, high:6.2,
+    colorAt:ph=>{if(ph<4.2)return '#c0392b';if(ph>6.2)return '#f1c40f';const t=(ph-4.2)/2.0;return lerpColor('#c0392b','#f1c40f',t);}},
+  bleu_thymol:{name:'Bleu de thymol', low:8.0, high:9.6,
+    colorAt:ph=>{if(ph<8.0)return '#f1c40f';if(ph>9.6)return '#1a5276';const t=(ph-8.0)/1.6;return lerpColor('#f1c40f','#1a5276',t);}}
+};
+function lerpColor(a,b,t){
+  const pa=hexToRgb(a),pb=hexToRgb(b);
+  const r=Math.round(pa.r+(pb.r-pa.r)*t),g=Math.round(pa.g+(pb.g-pa.g)*t),bl=Math.round(pa.b+(pb.b-pa.b)*t);
+  return `rgb(${r},${g},${bl})`;
+}
+function hexToRgb(hex){
+  const h=hex.replace('#','');
+  return {r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};
+}
+
+const $=id=>document.getElementById(id);
+const fmt=(x,d=2)=>Number(x).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const {ve,chemistry,phAt,stateFor,reactionHTML}=DosageCalc;
+let points=[];
+let showExperimentalCurve=false;
+let tangentStep=0; // 0=aucune, 1=T1, 2=T2, 3=parallèle équidistante + VE
+let tangentResult=null;
+
+function params(){return {ca:+$('ca').value,va:+$('va').value,cb:+$('cb').value,vb:+$('vol').value,acid:$('acidType').value,base:$('baseType').value,mode:$('titrationMode').value};}
+
+const EXPLAIN={"À l’équivalence":"À l’équivalence, les quantités d’acide et de base introduites sont stœchiométriques. Le pH dépend de la force de l’acide et de la base.",
+ "Avant équivalence":"La solution acide n’est pas encore neutralisée en totalité : l’acide est en excès.",
+ "Après équivalence":"La base titrante est en excès après l’équivalence."};
+
+const BURETTE_Y0=56, BURETTE_H=270, BURETTE_CAP=50;
+const BEAKER_BOTTOM=547, BEAKER_TOP=433, BEAKER_MAX_ML=100;
+
+function updateLiquids(p){
+  const remaining=Math.max(0, BURETTE_CAP - p.vb);
+  const fracB=remaining / BURETTE_CAP;
+  const hB=BURETTE_H * fracB;
+  const yB=BURETTE_Y0 + (BURETTE_H - hB);
+  $('buretteLiquid').setAttribute('y', String(yB));
+  $('buretteLiquid').setAttribute('height', String(Math.max(0,hB)));
+  $('meniscus').setAttribute('cy', String(yB));
+  // Couleur burette : base (jaune) ou acide (bleu)
+  if(p.mode==='base_by_acid'){
+    $('buretteLiquid').setAttribute('fill','url(#acidLiquid)');
+    $('meniscus').setAttribute('stroke','#237fb5');
+  }else{
+    $('buretteLiquid').setAttribute('fill','url(#baseLiquid)');
+    $('meniscus').setAttribute('stroke','#b58a1f');
+  }
+
+  const vBeaker=p.va + p.vb;
+  const fracA=Math.min(1, vBeaker / BEAKER_MAX_ML);
+  const hA=(BEAKER_BOTTOM - BEAKER_TOP) * fracA;
+  const yA=BEAKER_BOTTOM - hA;
+  $('beakerLiquid').setAttribute('y', String(yA));
+  $('beakerLiquid').setAttribute('height', String(Math.max(2,hA)));
+  $('beakerSurface').setAttribute('cy', String(yA));
+
+  const ind=INDICATORS[$('indicator').value];
+  const ph=phAt(p.vb,p);
+  const col=ind.colorAt(ph);
+  if(col){
+    $('beakerLiquid').setAttribute('fill', col);
+    $('beakerSurface').setAttribute('fill', col);
+    $('beakerSurface').setAttribute('stroke', col);
+    $('indSwatch').style.background=col;
+  }else{
+    const defCol=ph<7?'url(#acidLiquid)':'url(#baseLiquid)';
+    $('beakerLiquid').setAttribute('fill', defCol);
+    $('beakerSurface').setAttribute('fill', ph<7?'#bfe3f5':'#edc85f');
+    $('beakerSurface').setAttribute('stroke', ph<7?'#237fb5':'#b58a1f');
+    $('indSwatch').style.background='#ccc';
+  }
+}
+
+function update(){
+ const p=params(),e=ve(p),ph=phAt(p.vb,p),state=stateFor(p.vb,e),ch=chemistry(p);
+ $('caVal').textContent=fmt(p.ca,3)+' mol·L⁻¹';$('vaVal').textContent=fmt(p.va,1)+' mL';
+ $('cbVal').textContent=fmt(p.cb,3)+' mol·L⁻¹';$('volVal').textContent=fmt(p.vb,1)+' mL';
+ $('phNow').textContent=fmt(ph,2);$('vbNow').textContent=fmt(p.vb,1)+' mL';$('veNow').textContent=fmt(e,2)+' mL';
+ $('stateNow').textContent=state;$('svgPH').textContent=fmt(ph,2);
+ // Labels montage selon le sens
+ if(p.mode==='base_by_acid'){
+   $('svgBaseName').textContent=ch.acidName+' (burette)';
+   $('svgAcidName').textContent=ch.baseName+' (bécher)';
+   $('vaLabel').innerHTML='V<sub>B</sub> (bécher) <span class="value" id="vaVal">'+fmt(p.va,1)+' mL</span>';
+   $('volLabel').innerHTML='V<sub>A</sub> versé <span class="value" id="volVal">'+fmt(p.vb,1)+' mL</span>';
+   $('volName').textContent='Volume d’acide versé';
+   $('eqCalc').innerHTML='À l’équivalence : n(base) = n(acide)<br><b>'+fmt(p.cb*p.va,3)+' = '+fmt(p.ca*e,3)+' mmol</b>';
+   $('calcConc').innerHTML='C<sub>B</sub> = C<sub>A</sub> × V<sub>E</sub> / V<sub>B</sub><br><b>'+fmt(p.ca*e/p.va,3)+' mol·L⁻¹</b>';
+   if($('relExpected'))$('relExpected').innerHTML='C<sub>B</sub> V<sub>B</sub> = C<sub>A</sub> V<sub>E</sub>';
+ }else{
+   $('svgBaseName').textContent=ch.baseName+' (burette)';
+   $('svgAcidName').textContent=ch.acidName+' (bécher)';
+   $('vaLabel').innerHTML='V<sub>A</sub> (bécher) <span class="value" id="vaVal">'+fmt(p.va,1)+' mL</span>';
+   $('volLabel').innerHTML='V<sub>B</sub> versé <span class="value" id="volVal">'+fmt(p.vb,1)+' mL</span>';
+   $('volName').textContent='Volume de base versé';
+   $('eqCalc').innerHTML='À l’équivalence : n(acide) = n(base)<br><b>'+fmt(p.ca*p.va,3)+' = '+fmt(p.cb*e,3)+' mmol</b>';
+   $('calcConc').innerHTML='C<sub>A</sub> = C<sub>B</sub> × V<sub>E</sub> / V<sub>A</sub><br><b>'+fmt(p.cb*e/p.va,3)+' mol·L⁻¹</b>';
+   if($('relExpected'))$('relExpected').innerHTML='C<sub>A</sub> V<sub>A</sub> = C<sub>B</sub> V<sub>E</sub>';
+ }
+ $('explain').textContent=EXPLAIN[state];
+ updateLiquids(p);
+ $('reaction').innerHTML='<b>'+reactionHTML(ch)+'</b>';
+ $('warn').textContent=e>50?'Attention : V\u2091 = '+fmt(e,1)+' mL dépasse la capacité de la burette (50 mL). Diminuez C\u1d00·V\u1d00 ou augmentez C\u1d2e.':'';
+ if(tangentStep>0 && tangentResult){
+   $('tangentInfo').style.display='block';
+   $('tangentInfo').innerHTML=tangentResult.htmlForStep(tangentStep);
+ }else{
+   $('tangentInfo').style.display='none';
+ }
+ const tot=tangentResult&&tangentResult.totalSteps?tangentResult.totalSteps:3;
+ if(tangentStep===0)$('drawTangents').textContent='Tangente suivante (T₁)';
+ else if(tangentStep>=tot)$('drawTangents').textContent='Construction terminée';
+ else{
+   const sub=((tangentStep-1)%3)+1;
+   const which=tangentResult&&tangentResult.constructions&&tangentResult.constructions[Math.floor((tangentStep-1)/3)];
+   const tag=which&&which.label==='half'?'½-éq.':'Éq.';
+   const lab={1:'T₁ ('+tag+') → T₂',2:'T₂ ('+tag+') → parallèle',3:'Parallèle → inflexion suivante'};
+   $('drawTangents').textContent=lab[sub]||'Tangente suivante';
+ }
+ $('drawTangents').classList.toggle('active-mode',tangentStep>0);
+ drawChart();renderTable();
+}
+
+/** Courbe idéale : spline cubique monotone (Catmull-Rom centripète dense) */
+function idealCurve(pts, dens){
+  dens=dens||40;
+  if(pts.length===0)return [];
+  if(pts.length===1)return [{v:pts[0].v,ph:pts[0].ph}];
+  if(pts.length===2){
+    const out=[];
+    for(let i=0;i<=dens;i++){
+      const t=i/dens;
+      out.push({v:pts[0].v+t*(pts[1].v-pts[0].v), ph:pts[0].ph+t*(pts[1].ph-pts[0].ph)});
+    }
+    return out;
+  }
+  // points de contrôle étendus
+  const P=pts.map(p=>({v:p.v,ph:p.ph}));
+  const out=[];
+  for(let i=0;i<P.length-1;i++){
+    const p0=P[Math.max(0,i-1)];
+    const p1=P[i];
+    const p2=P[i+1];
+    const p3=P[Math.min(P.length-1,i+2)];
+    // tangentes type Catmull-Rom (facteur 0.5)
+    const m1v=0.5*(p2.v-p0.v), m1ph=0.5*(p2.ph-p0.ph);
+    const m2v=0.5*(p3.v-p1.v), m2ph=0.5*(p3.ph-p1.ph);
+    for(let j=0;j<dens;j++){
+      const t=j/dens, t2=t*t, t3=t2*t;
+      // Hermite
+      const h00=2*t3-3*t2+1, h10=t3-2*t2+t, h01=-2*t3+3*t2, h11=t3-t2;
+      const v=h00*p1.v + h10*m1v + h01*p2.v + h11*m2v;
+      const ph=h00*p1.ph + h10*m1ph + h01*p2.ph + h11*m2ph;
+      out.push({v,ph});
+    }
+  }
+  out.push(P[P.length-1]);
+  return out;
+}
+
+/** pH le long d'une courbe idéale (points + modèle si besoin de densifier hors points) */
+function makePhSampler(){
+  const p=params();
+  const sorted=points.length? [...points].sort((a,b)=>a.v-b.v) : null;
+  // Toujours s'appuyer sur le modèle théorique pour une courbe « idéale » continue
+  // si l'utilisateur a tracé la courbe : on affiche le modèle lissé (courbe de référence idéale)
+  // mais on peut aussi interpoler les points. Pour un tracé idéal pédagogique = modèle.
+  return function(v){ return phAt(v,p); };
+}
+
+function drawChart(){
+ const c=$('chart'),ctx=c.getContext('2d'),w=c.width,h=c.height;
+ ctx.clearRect(0,0,w,h);
+ const p=params(),e=ve(p);
+ const maxPt=points.length?Math.max(...points.map(pt=>pt.v),p.vb):p.vb;
+ const xmax=Math.max(50,Math.ceil(Math.max(maxPt,e)/10)*10+10),xmin=0,ymin=0,ymax=14;
+ const L=84,R=26,T=34,B=72,pw=w-L-R,phh=h-T-B;
+ const X=x=>L+(x-xmin)/(xmax-xmin)*pw,Y=y=>T+(ymax-y)/(ymax-ymin)*phh;
+ ctx.font='20px "Segoe UI",Arial,sans-serif';ctx.lineWidth=1;ctx.textAlign='right';
+ for(let y=0;y<=14;y+=2){ctx.strokeStyle='#e3eaf0';ctx.beginPath();ctx.moveTo(L,Y(y));ctx.lineTo(w-R,Y(y));ctx.stroke();ctx.fillStyle='#425b6c';ctx.fillText(y,L-10,Y(y)+7);}
+ ctx.textAlign='center';const xstep=xmax<=50?5:10;
+ for(let x=0;x<=xmax;x+=xstep){ctx.strokeStyle='#e3eaf0';ctx.beginPath();ctx.moveTo(X(x),T);ctx.lineTo(X(x),h-B);ctx.stroke();ctx.fillStyle='#425b6c';ctx.fillText(x,X(x),h-B+28);}
+ ctx.strokeStyle='#536879';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,h-B);ctx.lineTo(w-R,h-B);ctx.stroke();
+ ctx.fillStyle='#183044';ctx.font='bold 22px "Segoe UI",Arial,sans-serif';
+ ctx.textAlign='left';ctx.fillText('pH',L-70,T-8);ctx.textAlign='center';ctx.fillText(p.mode==='base_by_acid'?'Volume d’acide versé V_A (mL)':'Volume de base versé V_B (mL)',L+pw/2,h-12);
+ ctx.setLineDash([4,5]);ctx.strokeStyle='#9aa9b5';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(L,Y(7));ctx.lineTo(w-R,Y(7));ctx.stroke();ctx.setLineDash([]);
+
+ // Courbe idéale UNIQUEMENT sur commande (après mesures)
+ if(showExperimentalCurve){
+   // Courbe de dosage idéale (modèle continu lissé) — tracé pédagogique parfait
+   ctx.strokeStyle='#1677c8';ctx.lineWidth=3.5;ctx.lineJoin='round';ctx.lineCap='round';
+   ctx.beginPath();
+   const nSamp=800;
+   for(let i=0;i<=nSamp;i++){
+     const xv=xmax*i/nSamp;
+     const yv=phAt(xv,p);
+     if(i===0)ctx.moveTo(X(xv),Y(yv));else ctx.lineTo(X(xv),Y(yv));
+   }
+   ctx.stroke();
+   // Si des points existent, on les met en évidence (déjà plus bas)
+ }
+
+ // Construction des tangentes selon les concavités (étapes progressives)
+ if(tangentStep>0 && tangentResult && tangentResult.constructions){
+   const tr=tangentResult;
+   const per=3;
+   const nShow=Math.min(Math.ceil(tangentStep/per), tr.constructions.length);
+   // Pour chaque inflexion déjà atteinte, afficher selon le sous-niveau
+   for(let ci=0;ci<tr.constructions.length;ci++){
+     const C=tr.constructions[ci];
+     const startStep=ci*per+1;
+     const sub=tangentStep-startStep+1; // 1,2,3... pour cette inflexion
+     if(tangentStep<startStep)break;
+     const showT1=sub>=1, showT2=sub>=2, showPar=sub>=3;
+     const colT1=C.label==='half'?'#1abc9c':'#c0392b';
+     const colT2=C.label==='half'?'#16a085':'#e67e22';
+     const colPar=C.label==='half'?'#2980b9':'#8e44ad';
+     if(showT1){
+       ctx.strokeStyle=colT1;ctx.lineWidth=2.6;
+       ctx.beginPath();ctx.moveTo(X(C.t1.x1),Y(C.t1.y1));ctx.lineTo(X(C.t1.x2),Y(C.t1.y2));ctx.stroke();
+       ctx.fillStyle=colT1;ctx.font='bold 15px "Segoe UI",Arial,sans-serif';ctx.textAlign='left';
+       ctx.fillText(C.label==='half'?'T₁ (½)':'T₁ (Éq.)',X(C.t1.x2)+5,Y(C.t1.y2)+4);
+     }
+     if(showT2){
+       ctx.strokeStyle=colT2;ctx.lineWidth=2.6;
+       ctx.beginPath();ctx.moveTo(X(C.t2.x1),Y(C.t2.y1));ctx.lineTo(X(C.t2.x2),Y(C.t2.y2));ctx.stroke();
+       ctx.fillStyle=colT2;ctx.font='bold 15px "Segoe UI",Arial,sans-serif';ctx.textAlign='left';
+       ctx.fillText(C.label==='half'?'T₂ (½)':'T₂ (Éq.)',X(C.t2.x2)+5,Y(C.t2.y2)+4);
+     }
+     if(showPar){
+       ctx.strokeStyle=colPar;ctx.lineWidth=2.6;ctx.setLineDash([7,5]);
+       ctx.beginPath();ctx.moveTo(X(C.par.x1),Y(C.par.y1));ctx.lineTo(X(C.par.x2),Y(C.par.y2));ctx.stroke();
+       ctx.setLineDash([]);
+       // Point d'inflexion
+       ctx.fillStyle=colPar;
+       ctx.beginPath();ctx.arc(X(C.vInf),Y(C.phInf),8,0,Math.PI*2);ctx.fill();
+       ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+       // Verticale
+       ctx.strokeStyle=colPar;ctx.lineWidth=2;ctx.setLineDash([4,3]);
+       ctx.beginPath();ctx.moveTo(X(C.vInf),T);ctx.lineTo(X(C.vInf),h-B);ctx.stroke();ctx.setLineDash([]);
+       ctx.font='bold 16px "Segoe UI",Arial,sans-serif';ctx.textAlign='left';ctx.fillStyle=colPar;
+       if(C.label==='half'){
+         ctx.fillText('Inflexion ½ → V_E/2 ≈ '+fmt(C.vInf,1)+' mL',X(C.vInf)+10,Y(C.phInf)-12);
+         ctx.fillText('pH ≈ '+fmt(C.phInf,2),X(C.vInf)+10,Y(C.phInf)+18);
+       }else{
+         ctx.fillText('Inflexion = V_E ≈ '+fmt(C.vInf,1)+' mL',X(C.vInf)+10,Y(C.phInf)-12);
+       }
+     }
+   }
+ }
+
+ // Points enregistrés
+ points.forEach(pt=>{
+   ctx.beginPath();ctx.fillStyle='#16845b';ctx.arc(X(pt.v),Y(pt.ph),7,0,Math.PI*2);ctx.fill();
+   ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+ });
+ // Point actuel
+ ctx.beginPath();ctx.fillStyle='#e05e44';ctx.arc(X(p.vb),Y(phAt(p.vb,p)),9,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.stroke();
+}
+
+function renderTable(){
+ const body=$('dataRows');
+ if(!points.length){body.innerHTML='<tr><td colspan="4" class="small">Aucun point enregistré. Cliquez sur « Confirmer la mesure ».</td></tr>';return;}
+ body.innerHTML=points.map((pt,i)=>`<tr><td>${i+1}</td><td>${fmt(pt.v,1)}</td><td>${fmt(pt.ph,2)}</td><td>${pt.state}</td></tr>`).join('');
+}
+
+/**
+ * Concavités & points d'inflexion :
+ * - Le point d'inflexion se situe entre une concavité vers le haut et une vers le bas
+ *   (changement de signe de d²pH/dV², équivalent à un extremum de |dpH/dV|).
+ * - Fort/fort : 2 plateaux → 1 zone raide → 1 point d'inflexion = VE
+ * - Faible/fort (ou fort/faible) : zone tampon + zone raide → 2 points d'inflexion
+ *   (demi-équivalence puis équivalence).
+ * Construction pour chaque inflexion : T₁ sur la 1re concavité, T₂ sur la 2e,
+ * parallèle équidistante qui coupe la courbe au point d'inflexion.
+ */
+function computeTangents(){
+  const p=params();
+  const eTheo=ve(p);
+  const ch=chemistry(p);
+  const phOf=v=>phAt(Math.max(0,Math.min(50,v)),p);
+
+  const vMax=Math.min(49.5, Math.max(eTheo*2.4, eTheo+18));
+  const dv=0.08;
+
+  // Dérivée première (pente) et seconde (concavité)
+  function slope(v){return (phOf(v+dv)-phOf(v-dv))/(2*dv);}
+  function curv(v){return (phOf(v+dv)-2*phOf(v)+phOf(v-dv))/(dv*dv);}
+
+  // Échantillonner pente et courbure
+  const samples=[];
+  for(let v=0.5;v<vMax;v+=0.1){
+    samples.push({v, s:slope(v), c:curv(v), ph:phOf(v)});
+  }
+
+  // Points d'inflexion = maxima locaux de |pente| (raideurs)
+  // On cherche les pics de |s| séparés
+  const absS=samples.map(o=>Math.abs(o.s));
+  const peaks=[];
+  for(let i=3;i<samples.length-3;i++){
+    if(absS[i]>=absS[i-1]&&absS[i]>=absS[i+1]&&absS[i]>=absS[i-2]&&absS[i]>=absS[i+2]){
+      // éviter les plateaux plats
+      if(absS[i]<0.02)continue;
+      peaks.push({idx:i, v:samples[i].v, s:samples[i].s, ph:samples[i].ph, mag:absS[i]});
+    }
+  }
+  // Fusionner pics trop proches (< 1.5 mL)
+  peaks.sort((a,b)=>b.mag-a.mag);
+  const kept=[];
+  for(const pk of peaks){
+    if(kept.every(k=>Math.abs(k.v-pk.v)>1.5))kept.push(pk);
+  }
+  kept.sort((a,b)=>a.v-b.v);
+
+  // Classification du dosage
+  const weakAcidStrongBase=(ch.acidStrength==='weak'&&ch.baseStrength==='strong'&&p.mode!=='base_by_acid');
+  const strongAcidWeakBase=(ch.acidStrength==='strong'&&ch.baseStrength==='weak'&&p.mode==='base_by_acid');
+  const weakStrong=weakAcidStrongBase||strongAcidWeakBase;
+  // Aussi acide faible dosé... mode base_by_acid avec base faible?
+  const weakBaseStrongAcid=(ch.baseStrength==='weak'&&ch.acidStrength==='strong'&&p.mode==='base_by_acid');
+  const acidWeakBaseStrong=(ch.acidStrength==='weak'&&ch.baseStrength==='strong');
+  const hasHalf = weakAcidStrongBase || weakBaseStrongAcid || (acidWeakBaseStrong && p.mode!=='base_by_acid') || strongAcidWeakBase;
+
+  // Sélection des inflexions
+  // Toujours : le pic de pente le plus grand près de VE = équivalence
+  let eqPeak=null;
+  if(kept.length){
+    eqPeak=kept.reduce((best,pk)=>Math.abs(pk.v-eTheo)<Math.abs(best.v-eTheo)?pk:best, kept[0]);
+    // préférer le max de magnitude dans une fenêtre autour de VE
+    const near=kept.filter(pk=>Math.abs(pk.v-eTheo)<Math.max(4,eTheo*0.35));
+    if(near.length)eqPeak=near.reduce((a,b)=>a.mag>b.mag?a:b);
+  }else{
+    eqPeak={v:eTheo, ph:phOf(eTheo), mag:1, s:slope(eTheo)};
+  }
+
+  // Demi-équivalence : inflexion plus faible vers VE/2 (zone tampon)
+  let halfPeak=null;
+  if(hasHalf){
+    const vH=eTheo/2;
+    const candidates=kept.filter(pk=>pk.v<eqPeak.v-1.2 && pk.v>0.8);
+    if(candidates.length){
+      halfPeak=candidates.reduce((a,b)=>Math.abs(a.v-vH)<Math.abs(b.v-vH)?a:b);
+    }else{
+      // forcer un point à VE/2 (inflexion de la zone tampon)
+      halfPeak={v:vH, ph:phOf(vH), mag:Math.abs(slope(vH)), s:slope(vH)};
+    }
+  }
+
+  /** Construction T1, T2, parallèle pour un point d'inflexion donné */
+  function buildAt(vInf, label){
+    const phInf=phOf(vInf);
+    // Trouver de part et d'autre les zones de courbure opposée (concavités)
+    // À gauche de l'inflexion : chercher un point où |courbure| est marquée
+    // À droite : idem
+    let vL=vInf-2, vR=vInf+2;
+    // Parcourir vers la gauche : région avant le saut (plateau ou tampon)
+    let bestL=null, bestR=null;
+    for(let v=vInf-0.5;v>=Math.max(0.3,vInf-eTheo*0.8);v-=0.15){
+      const c=curv(v), s=Math.abs(slope(v));
+      // plateau = faible pente
+      if(s<0.25){bestL={v,ph:phOf(v),s:slope(v)};break;}
+    }
+    for(let v=vInf+0.5;v<=Math.min(vMax,vInf+eTheo*0.8);v+=0.15){
+      const s=Math.abs(slope(v));
+      if(s<0.25){bestR={v,ph:phOf(v),s:slope(v)};break;}
+    }
+    if(!bestL){const v=Math.max(0.5,vInf-Math.max(3,eTheo*0.35));bestL={v,ph:phOf(v),s:slope(v)};}
+    if(!bestR){const v=Math.min(vMax-0.5,vInf+Math.max(3,eTheo*0.35));bestR={v,ph:phOf(v),s:slope(v)};}
+
+    // Pente commune des tangentes parallèles = moyenne des pentes des deux concavités (≈0 sur plateaux)
+    const slopeT=(bestL.s+bestR.s)/2;
+    const len=Math.max(10, eTheo*0.55);
+    const t1={
+      x1:bestL.v-len*0.4, y1:bestL.ph-slopeT*len*0.4,
+      x2:bestL.v+len*0.6, y2:bestL.ph+slopeT*len*0.6,
+      anchor:bestL
+    };
+    const t2={
+      x1:bestR.v-len*0.6, y1:bestR.ph-slopeT*len*0.6,
+      x2:bestR.v+len*0.4, y2:bestR.ph+slopeT*len*0.4,
+      anchor:bestR
+    };
+    // Parallèle équidistante : y = slopeT*x + bMid
+    const b1=bestL.ph-slopeT*bestL.v;
+    const b2=bestR.ph-slopeT*bestR.v;
+    const bMid=(b1+b2)/2;
+    const x2p=Math.max(50,vMax+3);
+    const par={x1:0, y1:bMid, x2:x2p, y2:slopeT*x2p+bMid};
+
+    // Affiner VE : intersection de la parallèle avec la courbe (où pH(v)≈ slopeT*v+bMid près de vInf)
+    let vCut=vInf, bestDiff=1e9;
+    for(let v=vInf-Math.max(2,eTheo*0.25);v<=vInf+Math.max(2,eTheo*0.25);v+=0.05){
+      const diff=Math.abs(phOf(v)-(slopeT*v+bMid));
+      if(diff<bestDiff){bestDiff=diff;vCut=v;}
+    }
+    return {t1,t2,par,vInf:vCut, phInf:phOf(vCut), label, slopeT};
+  }
+
+  const constructions=[];
+  // Ordre pédagogique : d'abord demi-équivalence (si existe), puis équivalence
+  if(halfPeak){
+    constructions.push(buildAt(halfPeak.v, 'half'));
+  }
+  constructions.push(buildAt(eqPeak.v, 'eq'));
+
+  const halfpKa = weakAcidStrongBase ? ch.pKa
+    : (weakBaseStrongAcid || strongAcidWeakBase) ? (DosageCalc.BASES[p.base].pKa||null)
+    : (ch.acidStrength==='weak' ? ch.pKa : null);
+
+  function htmlForStep(step){
+    // step global : on parcourt les constructions une par une, 3 sous-étapes chacune
+    // step 1..3 = première inflexion (half si présent, sinon eq)
+    // step 4..6 = deuxième inflexion (eq) si half présent
+    const nInf=constructions.length;
+    const per=3;
+    const total=nInf*per;
+    const s=Math.min(step,total);
+    const iConst=Math.min(Math.floor((s-1)/per), nInf-1);
+    const sub=((s-1)%per)+1;
+    const C=constructions[iConst];
+    const isHalf=C.label==='half';
+    let h='<b>Méthode des tangentes (concavités)</b>';
+    if(nInf===1)h+=' — dosage avec <b>1 point d’inflexion</b> (équivalence)<br>';
+    else h+=' — dosage avec <b>2 points d’inflexion</b> (demi-équivalence + équivalence)<br>';
+    h+='Étape '+s+'/'+total+' : ';
+    if(isHalf)h+='<span style="color:#2980b9">inflexion de demi-équivalence</span>';
+    else h+='<span style="color:#8e44ad">inflexion d’équivalence</span>';
+    h+='<br>';
+    if(sub>=1)h+='• <span style="color:#c0392b"><b>T₁</b></span> sur la 1<sup>re</sup> concavité (avant l’inflexion).<br>';
+    if(sub>=2)h+='• <span style="color:#e67e22"><b>T₂</b></span> sur la 2<sup>e</sup> concavité (après l’inflexion), parallèle à T₁.<br>';
+    if(sub>=3){
+      h+='• <span style="color:#8e44ad"><b>Parallèle équidistante</b></span> → coupe la courbe au point d’inflexion';
+      if(isHalf){
+        h+=' = <b>demi-équivalence V<sub>E</sub>/2 ≈ '+fmt(C.vInf,1)+' mL</b>, pH ≈ <b>'+fmt(C.phInf,2)+'</b>';
+        if(halfpKa!=null)h+=' (pK<sub>a</sub> ≈ '+fmt(halfpKa,2)+')';
+        h+='.<br>';
+      }else{
+        h+=' = <b>V<sub>E</sub> ≈ '+fmt(C.vInf,1)+' mL</b> (point d’équivalence).<br>';
+      }
+    }
+    if(nInf===2 && iConst===0 && sub===3){
+      h+='<i>Poursuivre pour l’inflexion d’équivalence (T₁, T₂, parallèle).</i>';
+    }
+    return h;
+  }
+
+  return {constructions, htmlForStep, totalSteps: constructions.length*3, hasHalf:!!halfPeak, halfpKa};
+}
+
+['ca','va','cb','vol'].forEach(id=>$(id).addEventListener('input',update));
+$('acidType').addEventListener('change',update);
+$('baseType').addEventListener('change',update);
+$('titrationMode').addEventListener('change',()=>{points=[];showExperimentalCurve=false;tangentStep=0;tangentResult=null;$('drawCurve').classList.remove('active-mode');$('drawCurve').textContent='Tracer la courbe';update();});
+$('indicator').addEventListener('change',update);
+
+$('add').onclick=()=>{$('vol').value=Math.min(50,+$('vol').value+1);update();};
+$('add5').onclick=()=>{$('vol').value=Math.min(50,+$('vol').value+5);update();};
+$('eq').onclick=()=>{const p=params();$('vol').value=Math.min(50,ve(p));update();};
+
+$('savePoint').onclick=()=>{
+  const p=params();
+  const ph=phAt(p.vb,p);
+  const st=stateFor(p.vb,ve(p));
+  if(!points.some(pt=>Math.abs(pt.v-p.vb)<0.01)){
+    points.push({v:p.vb,ph,state:st});
+    points.sort((a,b)=>a.v-b.v);
+  }
+  update();
+};
+
+$('drawCurve').onclick=()=>{
+  // Courbe idéale : disponible dès qu'on le demande (après ou pendant les mesures)
+  // On exige au moins 1 point pour rester cohérent avec la démarche expérimentale
+  if(points.length<1){
+    $('warn').textContent='Enregistrez au moins un point de mesure, puis tracez la courbe idéale.';
+    return;
+  }
+  showExperimentalCurve=!showExperimentalCurve;
+  $('drawCurve').classList.toggle('active-mode',showExperimentalCurve);
+  $('drawCurve').textContent=showExperimentalCurve?'Masquer la courbe':'Tracer la courbe';
+  update();
+};
+
+$('drawTangents').onclick=()=>{
+  if(!showExperimentalCurve){
+    $('warn').textContent='Tracez d’abord la courbe (bouton « Tracer la courbe »), puis construisez les tangentes.';
+    return;
+  }
+  if(tangentStep===0){
+    tangentResult=computeTangents();
+    tangentStep=1;
+  }else if(tangentResult && tangentStep<tangentResult.totalSteps){
+    tangentStep++;
+  }
+  update();
+};
+
+$('resetTangents').onclick=()=>{
+  tangentStep=0;tangentResult=null;
+  update();
+};
+
+$('clearPoints').onclick=()=>{
+  points=[];showExperimentalCurve=false;tangentStep=0;tangentResult=null;
+  $('drawCurve').classList.remove('active-mode');$('drawCurve').textContent='Tracer la courbe';
+  update();
+};
+
+$('reset').onclick=()=>{
+  $('acidType').value='hcl';$('baseType').value='naoh';
+  $('titrationMode').value='acid_by_base';
+  $('ca').value=.1;$('va').value=20;$('cb').value=.1;$('vol').value=0;
+  $('indicator').value='none';
+  points=[];showExperimentalCurve=false;tangentStep=0;tangentResult=null;
+  $('drawCurve').classList.remove('active-mode');$('drawCurve').textContent='Tracer la courbe';
+  update();
+};
+
+$('proj').onclick=()=>{const on=document.body.classList.toggle('proj');$('proj').setAttribute('aria-pressed',String(on));};
+update();
+</script>
+</body>
+</html>
